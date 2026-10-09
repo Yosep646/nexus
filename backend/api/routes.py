@@ -4,6 +4,7 @@ from backend.database import storage
 from backend.cameras.stream import mjpeg
 from backend.detection.model import detector
 from backend.detection.service import classify_camera
+from backend.alerts.policy import evaluate
 
 router = APIRouter()
 
@@ -42,6 +43,7 @@ async def detect(camera_id: str):
     if result.get("status") == "ok" and result.get("predictions"):
         top = result["predictions"][0]
         storage.save_detection(camera_id, top["label"], top["confidence"])
+        result["review"] = evaluate(top["label"], top["confidence"])
     return result
 
 @router.get("/detections")
