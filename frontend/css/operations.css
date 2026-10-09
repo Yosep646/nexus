@@ -38,3 +38,23 @@
 .map-panel #map .leaflet-container{width:100%;height:100%}
 .map-panel .leaflet-tile-pane img{max-width:none!important;max-height:none!important}
 @media(max-width:750px){.map-panel #map{height:320px;min-height:320px}}
+
+/* Refined operations console and camera location controls */
+:root{font-family:Inter,'Segoe UI',system-ui,sans-serif}
+.shell{grid-template-columns:240px minmax(0,1fr)}
+.rail{background:#071322;border-right-color:#18394c}
+main{padding-top:28px}
+.panel,.tile{background:linear-gradient(150deg,#0d2235 0%,#0a192a 100%);border-color:#24465e;box-shadow:0 8px 26px #020b1626}
+.tile{min-height:142px}.tile strong{font-variant-numeric:tabular-nums}
+.panel h2{font-size:18px;font-weight:750}
+.camera-form{grid-template-columns:minmax(125px,1fr) minmax(200px,2fr) minmax(115px,.75fr) minmax(115px,.75fr) auto;align-items:stretch}
+.camera-form input{background:#071827;border-color:#34516b}
+.camera-form button{white-space:nowrap}
+.map-panel #map{height:440px;min-height:440px;width:100%;z-index:0}
+.map-panel .leaflet-container{background:#10283d}
+.map-panel .leaflet-tile{max-width:none!important;max-height:none!important;width:256px;height:256px}
+.camera .feed{height:175px}
+.camera-state{display:block;min-height:35px}
+@media(max-width:1550px){.camera-form{grid-template-columns:minmax(140px,1fr) minmax(200px,2fr) repeat(2,minmax(110px,.7fr))}.camera-form button{grid-column:1/-1}}
+@media(max-width:900px){.camera-form{grid-template-columns:1fr 1fr}.camera-form input:nth-child(-n+2){grid-column:1/-1}.camera-form button{grid-column:1/-1}}
+@media(max-width:750px){.shell{display:block}.map-panel #map{height:340px;min-height:340px}}
