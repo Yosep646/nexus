@@ -1,3 +1,4 @@
+import { renderReport } from './reports.js';
 /* Local demo only. No camera streams, model inference or external API calls. */
 (() => {
   'use strict';
@@ -61,6 +62,16 @@
     if (!camera) return;
     state.events.push({id:crypto.randomUUID(),camera:camera.name,label:$('event-type').value,date:new Date().toISOString()});
     state.events=state.events.slice(-500);save();render();
+  });
+  $('print-report').addEventListener('click', () => {
+    const report = renderReport(state.events);
+    const blob = new Blob([report], {type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nexus-reporte-demo.html';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   });
   $('reset-demo').addEventListener('click',()=>{if(confirm('¿Restablecer los datos simulados?')){state=defaults();save();render();}});
   $('export-csv').addEventListener('click',()=>{
