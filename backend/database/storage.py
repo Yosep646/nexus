@@ -26,6 +26,14 @@ def init_db():
             created_at TEXT NOT NULL,
             FOREIGN KEY(camera_id) REFERENCES cameras(id))""")
         db.execute("CREATE INDEX IF NOT EXISTS idx_detections_date ON detections(created_at DESC)")
+        columns = {row["name"] for row in db.execute("PRAGMA table_info(detections)")}
+        if "review_status" not in columns:
+            db.execute("ALTER TABLE detections ADD COLUMN review_status TEXT NOT NULL DEFAULT 'informational'")
+        if "reviewed_at" not in columns:
+            db.execute("ALTER TABLE detections ADD COLUMN reviewed_at TEXT")
+        if "review_notes" not in columns:
+            db.execute("ALTER TABLE detections ADD COLUMN review_notes TEXT")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_detections_review ON detections(review_status)")
 
 def add_camera(name, url):
     from backend.cameras.registry import _validate_url
@@ -53,14 +61,30 @@ def remove_camera(camera_id):
         result = db.execute("UPDATE cameras SET status='deleted' WHERE id=? AND status != 'deleted'", (camera_id,))
     return result.rowcount > 0
 
-def save_detection(camera_id, label, confidence):
+def save_detection(camera_id, label, confidence, review_status='informational'):
     item = {"id": str(uuid4()), "camera_id": camera_id, "label": label,
-            "confidence": float(confidence), "created_at": datetime.now(timezone.utc).isoformat()}
+            "confidence": float(confidence), "created_at": datetime.now(timezone.utc).isoformat(),
+            "review_status": review_status}
     with connect() as db:
-        db.execute("INSERT INTO detections VALUES (:id,:camera_id,:label,:confidence,:created_at)", item)
+        db.execute("""INSERT INTO detections (id,camera_id,label,confidence,created_at,review_status)
+                      VALUES (:id,:camera_id,:label,:confidence,:created_at,:review_status)""", item)
     return item
 
 def list_detections(limit=100):
     with connect() as db:
         return [dict(r) for r in db.execute(
             "SELECT * FROM detections ORDER BY created_at DESC LIMIT ?", (min(max(limit, 1), 500),))]
+
+def review_detection(detection_id: str, decision: str, notes: str):
+    """Review an existing detection once; preserve an immutable decision timestamp."""
+    if decision not in {"confirmed", "dismissed"}:
+        raise ValueError("Unsupported review decision")
+    with connect() as db:
+        updated = db.execute(
+            """UPDATE detections SET review_status=?, review_notes=?, reviewed_at=?
+               WHERE id=? AND review_status='pending_human_review'""",
+            (decision, notes, datetime.now(timezone.utc).isoformat(), detection_id))
+        if updated.rowcount != 1:
+            return None
+        row = db.execute("SELECT * FROM detections WHERE id=?", (detection_id,)).fetchone()
+        return dict(row)
