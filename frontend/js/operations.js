@@ -101,3 +101,28 @@ el('filters').onsubmit = event => {
   event.preventDefault();
   load().catch(error => status(error.message));
 };
+
+const reportButton = document.createElement('button');
+reportButton.type = 'button';
+reportButton.textContent = 'Descargar reporte PDF';
+el('reload').after(reportButton);
+reportButton.onclick = async () => {
+  reportButton.disabled = true;
+  try {
+    if (!api || !key) throw new Error('Conecta la API primero');
+    const response = await fetch(api + '/reports/detections.pdf', {
+      headers: {'X-API-Key': key}, cache: 'no-store'
+    });
+    if (!response.ok) throw new Error('Error HTTP ' + response.status);
+    const url = URL.createObjectURL(await response.blob());
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'nexus-detecciones.pdf';
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+  } catch (error) {
+    status('No se pudo descargar el reporte: ' + error.message);
+  } finally {
+    reportButton.disabled = false;
+  }
+};
