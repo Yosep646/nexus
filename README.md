@@ -49,3 +49,9 @@ NEXUS_EVIDENCE_DIR=/app/data/evidence
 `Dockerfile.ai` instala TensorFlow CPU mediante `requirements-ai.txt`. No cambies a esa imagen sin verificar límites de memoria, compatibilidad del modelo y recursos del servicio. El modelo no se genera al instalar TensorFlow. Después del despliegue, comprueba `/api/model/status` con autenticación y valida inferencias sobre imágenes de prueba antes de habilitar `NEXUS_MONITOR_ENABLED=true`.
 
 El volumen de Railway tiene un límite de 500 MB en el plan actual. Configura almacenamiento externo para evidencias grandes, políticas de retención y copias de seguridad. Montar un volumen nuevo en `/app/data` puede ocultar datos anteriores guardados dentro del contenedor; comprueba y migra los registros previos antes de asumir que se conservan.
+
+## Usar el modelo ya entrenado de Teachable Machine (TensorFlow.js)
+
+El dashboard incluye **Modelo entrenado Teachable Machine**. Selecciona el ZIP exportado que contiene `model.json`, `weights.bin` y `metadata.json` y pulsa **Activar modelo entrenado**. Se comprueba el número de clases y se carga el modelo con TensorFlow.js; si el navegador lo permite, se conserva en IndexedDB para siguientes sesiones en ese dispositivo. Pulsa **Analizar IA** en una cámara accesible para inferir sobre una captura auténtica. Estas predicciones se muestran como resultados locales sin validación y **no** se guardan en la base de datos ni generan alertas confirmadas.
+
+La carga desde ZIP funciona por dispositivo/navegador, **no instala el modelo en Railway**. Para inferencia centralizada continua se necesita convertir y desplegar pesos compatibles en el backend o habilitar un servicio de inferencia dedicado. El backend seguirá mostrando `Modelo no disponible` hasta entonces. La conexión remota de cámaras por IP privada también requiere una solución de transporte segura.
