@@ -86,6 +86,10 @@ async function load() {
 }
 el('connection').addEventListener('submit', async event => {
   event.preventDefault();
+  if (location.hostname.endsWith('.github.io')) {
+    status('La consola privada no admite claves de API en GitHub Pages');
+    return;
+  }
   const url = el('api-url').value.trim().replace(/\/$/, '');
   if (!/^https:\/\//.test(url) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/api$/.test(url)) {
     status('Utiliza HTTPS o una API local en localhost');
