@@ -37,8 +37,8 @@ def health():
     return {"status": "ok", "service": "nexus-risk-ai"}
 
 
-# Serve the public demonstration dashboard from the same Railway hostname.
-# API routes remain protected by X-API-Key; the demo contains simulated data.
+# Serve the operational dashboard from the same Railway hostname.
+# API routes remain protected by X-API-Key.
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 if FRONTEND_DIR.is_dir():
     app.mount("/dashboard", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="dashboard")
