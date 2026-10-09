@@ -37,11 +37,36 @@ import { renderReport } from './reports.js';
       const option = el('option',camera.name); option.value = camera.id; select.append(option);
     }
     $('add-event').disabled = state.cameras.length === 0;
+    const cameraFilter = $('filter-camera');
+    const selectedCamera = cameraFilter.value;
+    cameraFilter.replaceChildren();
+    const all = el('option','Todas'); all.value = ''; cameraFilter.append(all);
+    for (const name of [...new Set(state.events.map(e => e.camera))].sort()) {
+      const option = el('option',name); option.value=name; cameraFilter.append(option);
+    }
+    cameraFilter.value = [...cameraFilter.options].some(o=>o.value===selectedCamera) ? selectedCamera : '';
+    const filtered = state.events.filter(e =>
+      (!$('filter-type').value || e.label === $('filter-type').value) &&
+      (!cameraFilter.value || e.camera === cameraFilter.value));
+    $('filter-count').textContent = filtered.length + ' de ' + state.events.length + ' eventos';
+    const categories = ['Huayco','Inundación','Deslizamiento de tierra','Sequía','Normal'];
+    const chart = $('event-chart'); chart.replaceChildren();
+    const max = Math.max(1,...categories.map(label=>state.events.filter(e=>e.label===label).length));
+    for (const label of categories) {
+      const n = state.events.filter(e=>e.label===label).length;
+      const row = el('div',undefined,'chart-row');
+      const name = el('span',label);
+      const track = el('div',undefined,'chart-track');
+      const bar = el('div',undefined,'chart-bar');
+      bar.style.width = (n / max * 100) + '%';
+      track.append(bar);
+      row.append(name,track,el('strong',String(n))); chart.append(row);
+    }
     const tbody = $('event-rows'); tbody.replaceChildren();
-    if (!state.events.length) {
+    if (!filtered.length) {
       const tr = el('tr'); const td = el('td','Sin eventos simulados.',''); td.colSpan=4; tr.append(td); tbody.append(tr);
     }
-    for (const event of [...state.events].reverse()) {
+    for (const event of [...filtered].reverse()) {
       const tr = el('tr');
       tr.append(el('td',new Date(event.date).toLocaleString('es-PE')),
         el('td',event.camera),el('td',event.label));
@@ -51,6 +76,9 @@ import { renderReport } from './reports.js';
       tr.append(status); tbody.append(tr);
     }
   }
+  $('filter-type').addEventListener('change',render);
+  $('filter-camera').addEventListener('change',render);
+  $('clear-filters').addEventListener('click',()=>{$('filter-type').value='';$('filter-camera').value='';render();});
   $('add-camera').addEventListener('click', () => {
     if (state.cameras.length >= 12) { alert('Máximo 12 cámaras de ejemplo.'); return; }
     const n = state.cameras.length+1;
