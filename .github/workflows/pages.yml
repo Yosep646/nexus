@@ -1,4 +1,5 @@
-name: Deploy frontend to GitHub Pages
+name: Deploy NEXUS dashboard to GitHub Pages
+
 on:
   push:
     branches: [main]
@@ -6,28 +7,43 @@ on:
       - 'frontend/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
+
 permissions:
   contents: read
   pages: write
   id-token: write
+
 concurrency:
   group: pages
   cancel-in-progress: true
+
 jobs:
   deploy:
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Configure Pages
+      - name: Verify frontend files and reject custom domain
+        shell: bash
+        run: |
+          test -s frontend/index.html
+          test -s frontend/demo.html
+          test -s frontend/js/demo.js
+          test -s frontend/js/demo-cameras.js
+          test -s frontend/js/reports.js
+          test -s frontend/css/demo.css
+          test ! -e frontend/CNAME
+          test ! -e CNAME
+          test -e frontend/.nojekyll
+      - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Upload frontend
+      - name: Upload static dashboard
         uses: actions/upload-pages-artifact@v3
         with:
           path: frontend
-      - name: Deploy
+      - name: Deploy dashboard
         id: deployment
         uses: actions/deploy-pages@v4
