@@ -7,12 +7,16 @@ on:
       - 'backend/**'
       - 'tests/**'
       - 'requirements.txt'
+      - 'Dockerfile*'
+      - 'compose*.yaml'
       - '.github/workflows/backend-ci.yml'
   pull_request:
     paths:
       - 'backend/**'
       - 'tests/**'
       - 'requirements.txt'
+      - 'Dockerfile*'
+      - 'compose*.yaml'
 jobs:
   tests:
     runs-on: ubuntu-latest
@@ -24,3 +28,11 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - run: python -m pytest -q
+      - name: Compile all backend and training Python sources
+        run: python -m compileall -q backend training
+      - name: Validate Docker Compose configuration
+        env:
+          NEXUS_API_KEY: ci-validation-key-12345678901234567890
+        run: docker compose -f compose.yaml -f compose.ml.yaml config --quiet
+      - name: Build backend Docker image
+        run: docker build -t nexus-ci:${{ github.sha }} -f Dockerfile .
