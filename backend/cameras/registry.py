@@ -1,5 +1,5 @@
 """Temporary in-memory camera registry. Replace with persistent storage and authenticated access."""
-from ipaddress import ip_address
+from ipaddress import ip_address, ip_network
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -13,9 +13,10 @@ def _validate_url(url: str) -> None:
         host = ip_address(parsed.hostname)
     except ValueError as exc:
         raise ValueError("Use a numeric IP address on the local network") from exc
-    if not host.is_private:
-        raise ValueError("Camera must use a private LAN IP address")
-    if parsed.username or parsed.password:
+    allowed = (ip_network("10.0.0.0/8"), ip_network("172.16.0.0/12"), ip_network("192.168.0.0/16"))
+    if host.version != 4 or not any(host in subnet for subnet in allowed):
+        raise ValueError("Camera must use a numeric RFC1918 LAN IPv4 address")
+    if parsed.fragment or parsed.username or parsed.password:
         raise ValueError("Do not embed credentials in camera URLs")
 
 def add_camera(name: str, url: str) -> dict:
