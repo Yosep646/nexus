@@ -107,3 +107,13 @@ def readiness():
 def audit_events(limit: int = Query(100, ge=1, le=500)):
     """Read-only history of human review decisions."""
     return storage.list_audit_events(limit)
+
+@router.get("/detections/{detection_id}/evidence")
+def evidence_for_detection(detection_id: str):
+    """Return registered evidence metadata, not unrestricted filesystem paths."""
+    from backend.database.storage import connect
+    with connect() as db:
+        exists = db.execute("SELECT 1 FROM detections WHERE id=?", (detection_id,)).fetchone()
+    if exists is None:
+        raise HTTPException(status_code=404, detail="Detection not found")
+    return storage.list_evidence(detection_id)
