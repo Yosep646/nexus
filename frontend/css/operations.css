@@ -58,3 +58,11 @@ main{padding-top:28px}
 @media(max-width:1550px){.camera-form{grid-template-columns:minmax(140px,1fr) minmax(200px,2fr) repeat(2,minmax(110px,.7fr))}.camera-form button{grid-column:1/-1}}
 @media(max-width:900px){.camera-form{grid-template-columns:1fr 1fr}.camera-form input:nth-child(-n+2){grid-column:1/-1}.camera-form button{grid-column:1/-1}}
 @media(max-width:750px){.shell{display:block}.map-panel #map{height:340px;min-height:340px}}
+
+/* Full-width stable Leaflet viewport; never force tile dimensions */
+.map-panel{display:flex;flex-direction:column;min-width:0;overflow:visible}
+.map-panel #map{display:block;position:relative;flex:0 0 auto;width:100%;height:clamp(420px,48vh,650px);min-height:420px;overflow:hidden;border:1px solid #24465e;border-radius:12px;isolation:auto}
+.map-panel #map.leaflet-container{background:#0b2235}
+.map-panel #map .leaflet-pane,.map-panel #map .leaflet-map-pane,.map-panel #map .leaflet-tile-pane{max-width:none;max-height:none}
+.map-panel #map .leaflet-tile-pane img{max-width:none!important;max-height:none!important}
+@media(max-width:750px){.map-panel #map{height:400px;min-height:400px}}
