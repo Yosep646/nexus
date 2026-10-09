@@ -1,4 +1,5 @@
 import { renderReport } from './reports.js';
+import { parseCoordinates, syncCameraMarkers } from './demo-cameras.js';
 /* Local demo only. No camera streams, model inference or external API calls. */
 (() => {
   'use strict';
@@ -13,6 +14,7 @@ import { renderReport } from './reports.js';
     state = saved && Array.isArray(saved.cameras) && Array.isArray(saved.events) ? saved : defaults();
   } catch { state = defaults(); }
   const $ = id => document.getElementById(id);
+  let map = null, cameraLayer = null;
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
   const el = (tag, text, cls) => {
     const node = document.createElement(tag);
@@ -31,12 +33,18 @@ import { renderReport } from './reports.js';
       const visual = el('div', undefined, 'camera-visual'); visual.append(el('span','▣','camera-icon'));
       const body = el('div',undefined,'camera-body');
       body.append(el('h3',camera.name),el('p',camera.location));
+      if (Number.isFinite(camera.lat) && Number.isFinite(camera.lng)) {
+        const focus = el('button','Ver en mapa');
+        focus.addEventListener('click',()=>{if(map){map.setView([camera.lat,camera.lng],14);document.getElementById('map').scrollIntoView({behavior:'smooth'});}});
+        body.append(focus);
+      }
       const remove = el('button','Eliminar ejemplo');
       remove.addEventListener('click',() => { state.cameras = state.cameras.filter(c=>c.id!==camera.id); save(); render(); });
       body.append(remove); card.append(visual,body); grid.append(card);
       const option = el('option',camera.name); option.value = camera.id; select.append(option);
     }
     $('add-event').disabled = state.cameras.length === 0;
+    syncCameraMarkers(map, cameraLayer, state.cameras);
     const cameraFilter = $('filter-camera');
     const selectedCamera = cameraFilter.value;
     cameraFilter.replaceChildren();
@@ -79,6 +87,19 @@ import { renderReport } from './reports.js';
   $('filter-type').addEventListener('change',render);
   $('filter-camera').addEventListener('change',render);
   $('clear-filters').addEventListener('click',()=>{$('filter-type').value='';$('filter-camera').value='';render();});
+  $('camera-demo-form').addEventListener('submit', event => {
+    event.preventDefault();
+    try {
+      if (state.cameras.length >= 12) throw new Error('Máximo 12 cámaras de ejemplo.');
+      const coords = parseCoordinates($('camera-lat').value, $('camera-lng').value);
+      const name = $('camera-name').value.trim();
+      if (!name) throw new Error('Ingresa el nombre de la cámara.');
+      state.cameras.push({id:crypto.randomUUID(),name,location:'Ubicación manual (demo)',...coords});
+      save();render();event.currentTarget.reset();
+      $('camera-form-message').textContent = 'Cámara de demostración guardada en el mapa.';
+      if(map)map.setView([coords.lat,coords.lng],13);
+    } catch(error) {$('camera-form-message').textContent=error.message;}
+  });
   $('add-camera').addEventListener('click', () => {
     if (state.cameras.length >= 12) { alert('Máximo 12 cámaras de ejemplo.'); return; }
     const n = state.cameras.length+1;
@@ -112,7 +133,8 @@ import { renderReport } from './reports.js';
   });
   const clock=()=>{$('clock').textContent=new Date().toLocaleString('es-PE');};
   if (window.L) {
-    const map = L.map('demo-map', {scrollWheelZoom:false}).setView([-9.93, -76.24], 11);
+    map = L.map('demo-map', {scrollWheelZoom:false}).setView([-9.93, -76.24], 11);
+    cameraLayer = L.layerGroup().addTo(map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution:'&copy; OpenStreetMap contributors', maxZoom:19
     }).addTo(map);
