@@ -16,7 +16,9 @@ def test_camera_lifecycle(tmp_path, monkeypatch):
 
 def test_reject_public_ip(tmp_path, monkeypatch):
     monkeypatch.setattr(storage, "DB_PATH", tmp_path / "test.db")
+    monkeypatch.setenv("NEXUS_API_KEY", "test-key-12345678901234567890")
     with TestClient(app) as client:
+        client.headers.update({"X-API-Key": "test-key-12345678901234567890"})
         result = client.post("/api/cameras", json={"name": "Invalid", "url": "http://8.8.8.8/video"})
         assert result.status_code == 422
 
