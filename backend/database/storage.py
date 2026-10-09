@@ -21,6 +21,11 @@ def init_db():
         db.execute("""CREATE TABLE IF NOT EXISTS cameras (
             id TEXT PRIMARY KEY, name TEXT NOT NULL, url TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'registered', created_at TEXT NOT NULL)""")
+        camera_columns = {row["name"] for row in db.execute("PRAGMA table_info(cameras)")}
+        if "latitude" not in camera_columns:
+            db.execute("ALTER TABLE cameras ADD COLUMN latitude REAL")
+        if "longitude" not in camera_columns:
+            db.execute("ALTER TABLE cameras ADD COLUMN longitude REAL")
         db.execute("""CREATE TABLE IF NOT EXISTS detections (
             id TEXT PRIMARY KEY, camera_id TEXT NOT NULL,
             label TEXT NOT NULL, confidence REAL NOT NULL,
@@ -50,25 +55,25 @@ def init_db():
             status TEXT NOT NULL DEFAULT 'queued', created_at TEXT NOT NULL,
             FOREIGN KEY(detection_id) REFERENCES detections(id))""")
 
-def add_camera(name, url):
+def add_camera(name, url, latitude=None, longitude=None):
     from backend.cameras.registry import _validate_url
     _validate_url(url)
     name = name.strip()
     if not name:
         raise ValueError("Camera name cannot be empty")
-    camera = {"id": str(uuid4()), "name": name, "url": url, "status": "registered"}
+    camera = {"id": str(uuid4()), "name": name, "url": url, "status": "registered", "latitude": latitude, "longitude": longitude}
     with connect() as db:
-        db.execute("INSERT INTO cameras VALUES (?, ?, ?, ?, ?)",
-                   (camera["id"], name, url, camera["status"], datetime.now(timezone.utc).isoformat()))
+        db.execute("INSERT INTO cameras (id,name,url,status,created_at,latitude,longitude) VALUES (?,?,?,?,?,?,?)",
+                   (camera["id"], name, url, camera["status"], datetime.now(timezone.utc).isoformat(),latitude,longitude))
     return camera
 
 def list_cameras():
     with connect() as db:
-        return [dict(r) for r in db.execute("SELECT id,name,url,status FROM cameras WHERE status != 'deleted' ORDER BY created_at DESC")]
+        return [dict(r) for r in db.execute("SELECT id,name,url,status,latitude,longitude FROM cameras WHERE status != 'deleted' ORDER BY created_at DESC")]
 
 def get_camera(camera_id):
     with connect() as db:
-        row = db.execute("SELECT id,name,url,status FROM cameras WHERE id=? AND status != 'deleted'", (camera_id,)).fetchone()
+        row = db.execute("SELECT id,name,url,status,latitude,longitude FROM cameras WHERE id=? AND status != 'deleted'", (camera_id,)).fetchone()
     return dict(row) if row else None
 
 def remove_camera(camera_id):
