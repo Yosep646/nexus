@@ -50,8 +50,29 @@ def review_detection(detection_id: str, payload: ReviewRequest):
     return reviewed
 
 @router.get("/detections")
-def detections(limit: int = Query(100, ge=1, le=500)):
-    return storage.list_detections(limit)
+def detections(limit: int = Query(100, ge=1, le=500),
+               camera_id: str | None = None,
+               label: str | None = None,
+               review_status: str | None = None):
+    from backend.database.storage import connect
+    conditions, params = [], []
+    if camera_id:
+        conditions.append("camera_id=?")
+        params.append(camera_id)
+    if label:
+        conditions.append("label=?")
+        params.append(label)
+    if review_status:
+        if review_status not in ("informational", "pending_human_review", "confirmed", "dismissed"):
+            raise HTTPException(status_code=422, detail="Invalid review status")
+        conditions.append("review_status=?")
+        params.append(review_status)
+    where = " WHERE " + " AND ".join(conditions) if conditions else ""
+    with connect() as db:
+        return [dict(row) for row in db.execute(
+            "SELECT * FROM detections" + where + " ORDER BY created_at DESC LIMIT ?",
+            (*params, limit))]
+
 
 @router.get("/stats")
 def stats():
