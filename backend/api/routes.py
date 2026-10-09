@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
+from starlette.concurrency import run_in_threadpool
 import logging
 from backend.evidence.service import store_frame, load_evidence
 
@@ -33,6 +34,60 @@ def delete_camera(camera_id: str):
 @router.get("/cameras/{camera_id}/stream")
 async def camera_stream(camera_id: str):
     return await mjpeg(camera_id)
+
+
+@router.get("/cameras/{camera_id}/snapshot")
+async def camera_snapshot(camera_id: str):
+    """One authenticated JPEG frame from an authorized IP camera, not a public relay."""
+    import cv2
+    from backend.database.storage import get_camera
+    from backend.cameras.registry import _validate_url
+    camera = get_camera(camera_id)
+    if camera is None:
+        raise HTTPException(status_code=404, detail="Camera not found")
+    try:
+        _validate_url(camera["url"])
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    def read_one():
+        capture = cv2.VideoCapture(camera["url"])
+        try:
+            if not capture.isOpened():
+                return None
+            ok, frame = capture.read()
+            if not ok:
+                return None
+            ok, jpg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
+            return jpg.tobytes() if ok else None
+        finally:
+            capture.release()
+
+    data = await run_in_threadpool(read_one)
+    if data is None:
+        raise HTTPException(status_code=503, detail="Camera stream unreachable from server")
+    return Response(content=data, media_type="image/jpeg",
+                    headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
+
+
+@router.get("/risk-advisories")
+def risk_advisories():
+    """Preliminary, unverified advisories; never claim a forecast from a single image."""
+    from backend.database.storage import list_detections
+    labels = {"lluvia": "Lluvia observada: revisar pronósticos oficiales y zonas de quebradas; no implica un huayco confirmado.",
+              "huayco": "Posible huayco observado: solicitar verificación humana inmediata.",
+              "inundacion": "Posible inundación observada: revisar niveles y reportes oficiales.",
+              "deslizamiento de tierra": "Posible movimiento de ladera: solicitar verificación humana."}
+    output = []
+    for item in list_detections(100):
+        label = str(item.get("label", "")).lower()
+        if label not in labels:
+            continue
+        output.append({"detection_id": item["id"], "camera_id": item["camera_id"],
+                       "phenomenon": item["label"], "confidence": item["confidence"],
+                       "created_at": item["created_at"], "review_status": item.get("review_status"),
+                       "message": labels[label], "forecast": False})
+    return output
 
 @router.get("/model/status")
 def model_status():
