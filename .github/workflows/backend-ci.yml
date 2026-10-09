@@ -36,3 +36,12 @@ jobs:
         run: docker compose -f compose.yaml -f compose.ml.yaml config --quiet
       - name: Build backend Docker image
         run: docker build -t nexus-ci:${{ github.sha }} -f Dockerfile .
+      - name: Smoke test running Docker API and authentication
+        run: |
+          docker run -d --name nexus-api-smoke -e NEXUS_API_KEY=ci-validation-key-12345678901234567890 -e NEXUS_DB_PATH=/tmp/nexus-smoke.db nexus-ci:${{ github.sha }}
+          trap 'docker rm -f nexus-api-smoke >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 15); do
+            if docker exec nexus-api-smoke python -c "import urllib.request; assert urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200" 2>/dev/null; then break; fi
+            sleep 2
+          done
+          docker exec nexus-api-smoke python -c "import urllib.request, urllib.error; base='http://127.0.0.1:8000'; assert urllib.request.urlopen(base+'/health').status==200; request=urllib.request.Request(base+'/api/cameras',headers={'X-API-Key':'ci-validation-key-12345678901234567890'}); assert urllib.request.urlopen(request).status==200; print('Docker health and authenticated API: OK')"
