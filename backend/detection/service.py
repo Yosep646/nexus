@@ -1,10 +1,8 @@
-"""Per-camera inference endpoint: captures a single frame on demand.
-Do not use classification alone for real emergency warnings.
-"""
+"""Classify one frame from a registered camera on demand."""
 import asyncio
 import cv2
 from fastapi import HTTPException
-from backend.cameras.registry import _cameras
+from backend.database.storage import get_camera
 from backend.detection.model import detector
 
 def _capture_once(url: str):
@@ -16,7 +14,7 @@ def _capture_once(url: str):
         cap.release()
 
 async def classify_camera(camera_id: str):
-    camera = _cameras.get(camera_id)
+    camera = get_camera(camera_id)
     if camera is None:
         raise HTTPException(status_code=404, detail="Camera not found")
     if not detector.ready:
