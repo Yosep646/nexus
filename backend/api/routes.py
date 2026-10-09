@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
+from backend.api.schemas import CameraCreate, ReviewRequest
 from backend.database import storage
 from backend.cameras.stream import mjpeg
 from backend.detection.model import detector
@@ -8,16 +8,12 @@ from backend.alerts.policy import evaluate
 
 router = APIRouter()
 
-class CameraInput(BaseModel):
-    name: str = Field(min_length=1, max_length=80)
-    url: str = Field(min_length=7, max_length=2048)
-
 @router.get("/cameras")
 def cameras():
     return storage.list_cameras()
 
 @router.post("/cameras", status_code=201)
-def create_camera(payload: CameraInput):
+def create_camera(payload: CameraCreate):
     try:
         return storage.add_camera(payload.name, payload.url)
     except ValueError as exc:
@@ -46,12 +42,8 @@ async def detect(camera_id: str):
         storage.save_detection(camera_id, top["label"], top["confidence"], result["review"]["status"])
     return result
 
-class ReviewInput(BaseModel):
-    decision: str = Field(pattern="^(confirmed|dismissed)$")
-    notes: str = Field(default="", max_length=1000)
-
 @router.patch("/detections/{detection_id}/review")
-def review_detection(detection_id: str, payload: ReviewInput):
+def review_detection(detection_id: str, payload: ReviewRequest):
     reviewed = storage.review_detection(detection_id, payload.decision, payload.notes)
     if reviewed is None:
         raise HTTPException(status_code=409, detail="Detection not pending review or not found")
