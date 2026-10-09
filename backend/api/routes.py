@@ -55,10 +55,20 @@ def detections(limit: int = Query(100, ge=1, le=500)):
 
 @router.get("/stats")
 def stats():
-    from collections import Counter
-    events = storage.list_detections(500)
-    return {"cameras": len(storage.list_cameras()), "detections_sampled": len(events),
-            "by_label": dict(Counter(event["label"] for event in events))}
+    from backend.database.storage import connect
+    with connect() as db:
+        rows = db.execute("SELECT label, COUNT(*) AS total FROM detections GROUP BY label").fetchall()
+        counts = db.execute("""SELECT COUNT(*) AS total,
+            SUM(CASE WHEN review_status='pending_human_review' THEN 1 ELSE 0 END) AS pending,
+            SUM(CASE WHEN review_status='confirmed' THEN 1 ELSE 0 END) AS confirmed,
+            SUM(CASE WHEN review_status='dismissed' THEN 1 ELSE 0 END) AS dismissed
+            FROM detections""").fetchone()
+    return {"cameras": len(storage.list_cameras()),
+            "detections_total": counts["total"],
+            "pending_review": counts["pending"] or 0,
+            "confirmed": counts["confirmed"] or 0,
+            "dismissed": counts["dismissed"] or 0,
+            "by_label": {row["label"]: row["total"] for row in rows}}
 
 @router.get("/readiness")
 def readiness():
