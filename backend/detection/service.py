@@ -28,4 +28,4 @@ async def classify_camera(camera_id: str):
     if frame is None:
         raise HTTPException(status_code=503, detail="Camera frame unavailable")
     result = await asyncio.to_thread(detector.predict, frame)
-    return {"camera_id": camera_id, **result}
+    return {"camera_id": camera_id, **result, "_frame": frame if result.get("status") == "ok" else None}
