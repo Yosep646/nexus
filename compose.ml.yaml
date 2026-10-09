@@ -1,0 +1,10 @@
+# Run only after installing a validated model:
+# docker compose -f compose.yaml -f compose.ml.yaml up --build -d
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.ml
+    mem_limit: 4g
+    environment:
+      NEXUS_MONITOR_ENABLED: ${NEXUS_MONITOR_ENABLED:-false}
