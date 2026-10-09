@@ -11,7 +11,7 @@ Estado: implementación en rama de trabajo; **no equivale a producción verifica
 
 ## Docker
 - Demo sin modelo: `docker compose up --build -d` (API en 127.0.0.1:8000).
-- Para inferencia, usar imagen compilada desde `Dockerfile.ml` y los pesos validados; reservar RAM y CPU suficientes.
+- Para inferencia, ejecutar `docker compose -f compose.yaml -f compose.ml.yaml up --build -d` con pesos validados; reservar RAM y CPU suficientes.
 - `NEXUS_MONITOR_ENABLED=true` habilita el procesamiento periódico **solo después** de verificar el modelo y la conectividad de cámaras.
 - SQLite y JPEG se conservan en el volumen `nexus_data`. Configurar copias de seguridad externas.
 
