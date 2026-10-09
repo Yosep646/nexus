@@ -21,6 +21,8 @@ def main():
         parser.error("Dataset directory not found; supply labeled images first")
     if args.epochs < 1 or args.epochs > 200:
         parser.error("epochs must be between 1 and 200")
+    from training.validate_dataset import validate
+    validate(args.dataset)
     import tensorflow as tf
     tf.keras.utils.set_random_seed(args.seed)
     train = tf.keras.utils.image_dataset_from_directory(
