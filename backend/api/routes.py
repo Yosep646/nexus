@@ -21,7 +21,9 @@ def cameras():
 @router.post("/cameras", status_code=201)
 def create_camera(payload: CameraCreate):
     try:
-        return storage.add_camera(payload.name, payload.url)
+        if (payload.latitude is None) != (payload.longitude is None):
+            raise ValueError("Latitude and longitude must be provided together")
+        return storage.add_camera(payload.name, payload.url, payload.latitude, payload.longitude)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
