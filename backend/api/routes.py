@@ -102,3 +102,8 @@ def readiness():
         raise HTTPException(status_code=503, detail="Database unavailable")
     return {"database": "ready", "model": "ready" if detector.ready else "unavailable",
             "inference_enabled": bool(detector.ready)}
+
+@router.get("/audit")
+def audit_events(limit: int = Query(100, ge=1, le=500)):
+    """Read-only history of human review decisions."""
+    return storage.list_audit_events(limit)
