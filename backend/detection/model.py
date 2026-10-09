@@ -14,9 +14,11 @@ class Detector:
     def __init__(self):
         self.model = None
         self.labels = LABELS
+        self.preprocessing = 'external_minus_one_to_one'
         if METADATA.exists():
             data = json.loads(METADATA.read_text(encoding="utf-8"))
             self.labels = data.get("labels", LABELS)
+            self.preprocessing = data.get("preprocessing", "external_minus_one_to_one")
         if KERAS_MODEL.exists():
             import tensorflow as tf
             self.model = tf.keras.models.load_model(KERAS_MODEL, compile=False)
@@ -32,7 +34,10 @@ class Detector:
         rgb = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
         rgb = cv2.resize(rgb, (224, 224), interpolation=cv2.INTER_AREA)
         # Teachable Machine image models commonly use [-1, 1] normalization.
-        batch = (np.asarray(rgb, dtype=np.float32) / 127.5 - 1.0)[None, ...]
+        batch = np.asarray(rgb, dtype=np.float32)
+        if self.preprocessing != "raw_0_255_pixels_model_rescaling":
+            batch = batch / 127.5 - 1.0
+        batch = batch[None, ...]
         scores = np.asarray(self.model.predict(batch, verbose=0))[0]
         results = sorted(({"label": label, "confidence": float(score)}
                           for label, score in zip(self.labels, scores)), key=lambda x: -x["confidence"])
