@@ -59,3 +59,15 @@ def stats():
     events = storage.list_detections(500)
     return {"cameras": len(storage.list_cameras()), "detections_sampled": len(events),
             "by_label": dict(Counter(event["label"] for event in events))}
+
+@router.get("/readiness")
+def readiness():
+    """Operational readiness, independent of the public liveness endpoint."""
+    from backend.database.storage import connect
+    try:
+        with connect() as db:
+            db.execute("SELECT 1").fetchone()
+    except Exception:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    return {"database": "ready", "model": "ready" if detector.ready else "unavailable",
+            "inference_enabled": bool(detector.ready)}
