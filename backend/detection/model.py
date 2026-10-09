@@ -3,7 +3,10 @@ Model inference is optional until converted weights are installed locally.
 """
 from pathlib import Path
 import json
+import logging
 import numpy as np
+
+log = logging.getLogger(__name__)
 from backend.detection.labels import normalize_labels
 
 LABELS = ["deslizamiento de tierra", "huayco", "inundacion", "normal", "sequia"]
@@ -17,12 +20,19 @@ class Detector:
         self.labels = normalize_labels(LABELS)
         self.preprocessing = 'external_minus_one_to_one'
         if METADATA.exists():
-            data = json.loads(METADATA.read_text(encoding="utf-8"))
-            self.labels = normalize_labels(data.get("labels", LABELS))
-            self.preprocessing = data.get("preprocessing", "external_minus_one_to_one")
+            try:
+                data = json.loads(METADATA.read_text(encoding="utf-8"))
+                self.labels = normalize_labels(data.get("labels", LABELS))
+                self.preprocessing = data.get("preprocessing", "external_minus_one_to_one")
+            except (ValueError, OSError, TypeError):
+                log.exception("Invalid model metadata; inference disabled")
+                return
         if KERAS_MODEL.exists():
-            import tensorflow as tf
-            self.model = tf.keras.models.load_model(KERAS_MODEL, compile=False)
+            try:
+                import tensorflow as tf
+                self.model = tf.keras.models.load_model(KERAS_MODEL, compile=False)
+            except (ImportError, ValueError, OSError):
+                log.exception("Could not load Keras model; inference disabled")
         elif (MODEL_DIR / "model.json").exists():
             # A raw TensorFlow.js export is not a Keras model.
             # Keep inference unavailable instead of pretending weights are loaded.
