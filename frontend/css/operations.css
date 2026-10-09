@@ -52,7 +52,7 @@ main{padding-top:28px}
 .camera-form button{white-space:nowrap}
 .map-panel #map{height:440px;min-height:440px;width:100%;z-index:0}
 .map-panel .leaflet-container{background:#10283d}
-.map-panel .leaflet-tile{max-width:none!important;max-height:none!important;width:256px;height:256px}
+
 .camera .feed{height:175px}
 .camera-state{display:block;min-height:35px}
 @media(max-width:1550px){.camera-form{grid-template-columns:minmax(140px,1fr) minmax(200px,2fr) repeat(2,minmax(110px,.7fr))}.camera-form button{grid-column:1/-1}}
@@ -64,5 +64,15 @@ main{padding-top:28px}
 .map-panel #map{display:block;position:relative;flex:0 0 auto;width:100%;height:clamp(420px,48vh,650px);min-height:420px;overflow:hidden;border:1px solid #24465e;border-radius:12px;isolation:auto}
 .map-panel #map.leaflet-container{background:#0b2235}
 .map-panel #map .leaflet-pane,.map-panel #map .leaflet-map-pane,.map-panel #map .leaflet-tile-pane{max-width:none;max-height:none}
-.map-panel #map .leaflet-tile-pane img{max-width:none!important;max-height:none!important}
+
 @media(max-width:750px){.map-panel #map{height:400px;min-height:400px}}
+
+/* Leaflet structural fallback: ensure tiles are absolutely positioned even when CDN CSS is blocked. */
+#map.leaflet-container{position:relative;overflow:hidden;outline:0;touch-action:pan-x pan-y;background:#0b2235}
+#map .leaflet-pane,#map .leaflet-tile,#map .leaflet-marker-icon,#map .leaflet-marker-shadow,#map .leaflet-tile-container,#map .leaflet-pane>svg,#map .leaflet-pane>canvas,#map .leaflet-image-layer{position:absolute;left:0;top:0}
+#map .leaflet-map-pane,#map .leaflet-tile-pane,#map .leaflet-overlay-pane{position:absolute;left:0;top:0}
+#map .leaflet-tile{display:block;max-width:none!important;max-height:none!important;border:0;user-select:none;pointer-events:none}
+#map .leaflet-tile-container{pointer-events:none}
+#map .leaflet-zoom-animated{transform-origin:0 0}
+#map .leaflet-control-container{position:relative;z-index:800}
+#map .leaflet-control{position:relative;z-index:800;pointer-events:auto}
