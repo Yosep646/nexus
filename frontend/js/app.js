@@ -21,9 +21,19 @@ async function refresh() {
       preview.onerror = () => { preview.removeAttribute('src'); preview.style.display = 'none'; placeholder.style.display = 'grid'; placeholder.textContent = 'No se pudo abrir la transmisión. Verifica IP y formato de video.'; };
       const stop = document.createElement('button'); stop.textContent = 'Detener';
       stop.onclick = () => { preview.removeAttribute('src'); preview.style.display = 'none'; placeholder.style.display = 'grid'; };
+      const detect = document.createElement('button'); detect.textContent = 'Analizar fotograma';
+      const prediction = document.createElement('p'); prediction.textContent = 'Sin análisis';
+      detect.onclick = async () => {
+        prediction.textContent = 'Analizando...';
+        try {
+          const result = await request('/cameras/' + encodeURIComponent(camera.id) + '/detect', {method:'POST'});
+          prediction.textContent = result.status === 'model_unavailable' ? 'Modelo de IA aún no instalado' :
+            (result.predictions[0] ? result.predictions[0].label + ': ' + (result.predictions[0].confidence * 100).toFixed(1) + '%' : 'Sin predicciones');
+        } catch(e) { prediction.textContent = e.message; }
+      };
       const remove = document.createElement('button'); remove.textContent = 'Eliminar';
       remove.onclick = async () => { try { stop.click(); await request('/cameras/' + camera.id, {method:'DELETE'}); await refresh(); } catch(e) { message.textContent = e.message; } };
-      card.append(title,placeholder,preview,url,start,stop,remove); grid.append(card);
+      card.append(title,placeholder,preview,url,start,stop,detect,prediction,remove); grid.append(card);
     });
   } catch(e) { message.textContent = 'No se pudo conectar al backend: ' + e.message; }
 }

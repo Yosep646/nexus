@@ -1,12 +1,11 @@
-"""LAN MJPEG streaming with OpenCV. Use only on a trusted local network."""
+"""MJPEG camera relay for trusted LAN deployment only."""
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import cv2
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
-from backend.cameras.registry import _cameras
+from backend.database.storage import get_camera
 
-# Bound simultaneous camera reads to avoid unbounded worker growth.
 _executor = ThreadPoolExecutor(max_workers=4)
 
 def _frames(url: str):
@@ -25,10 +24,9 @@ def _frames(url: str):
         capture.release()
 
 async def mjpeg(camera_id: str):
-    camera = _cameras.get(camera_id)
+    camera = get_camera(camera_id)
     if camera is None:
         raise HTTPException(status_code=404, detail="Camera not found")
-    # Never allow untrusted remote clients to request arbitrary URLs.
     iterator = _frames(camera["url"])
     async def generate():
         loop = asyncio.get_running_loop()
