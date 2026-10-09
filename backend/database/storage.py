@@ -40,6 +40,11 @@ def init_db():
             id TEXT PRIMARY KEY, event_type TEXT NOT NULL, entity_id TEXT NOT NULL,
             details TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL)""")
         db.execute("CREATE INDEX IF NOT EXISTS idx_audit_events_date ON audit_events(created_at DESC)")
+        db.execute("""CREATE TABLE IF NOT EXISTS evidence (
+            id TEXT PRIMARY KEY, detection_id TEXT NOT NULL,
+            filename TEXT NOT NULL, sha256 TEXT NOT NULL, created_at TEXT NOT NULL,
+            FOREIGN KEY(detection_id) REFERENCES detections(id))""")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_evidence_detection ON evidence(detection_id)")
 
 def add_camera(name, url):
     from backend.cameras.registry import _validate_url
@@ -104,3 +109,21 @@ def list_audit_events(limit=100):
         return [dict(row) for row in db.execute(
             "SELECT * FROM audit_events ORDER BY created_at DESC LIMIT ?",
             (min(max(limit, 1), 500),))]
+
+def save_evidence_record(detection_id, filename, sha256):
+    """Register metadata for an existing detection; bytes are managed separately."""
+    if not isinstance(sha256, str) or len(sha256) != 64 or any(ch not in "0123456789abcdef" for ch in sha256):
+        raise ValueError("Expected a lowercase SHA-256 digest")
+    if not filename or "/" in filename or "\\" in filename or filename in {".", ".."}:
+        raise ValueError("Expected a plain evidence filename")
+    record = {"id": str(uuid4()), "detection_id": detection_id, "filename": filename,
+              "sha256": sha256, "created_at": datetime.now(timezone.utc).isoformat()}
+    with connect() as db:
+        db.execute("""INSERT INTO evidence (id,detection_id,filename,sha256,created_at)
+                      VALUES (:id,:detection_id,:filename,:sha256,:created_at)""", record)
+    return record
+
+def list_evidence(detection_id):
+    with connect() as db:
+        return [dict(row) for row in db.execute(
+            "SELECT * FROM evidence WHERE detection_id=? ORDER BY created_at DESC", (detection_id,))]
