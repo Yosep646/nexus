@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from backend.cameras.registry import add_camera, list_cameras, remove_camera
+from backend.cameras.stream import mjpeg
 
 router = APIRouter()
 
@@ -24,3 +25,7 @@ def delete_camera(camera_id: str):
     if not remove_camera(camera_id):
         raise HTTPException(status_code=404, detail="Camera not found")
     return {"deleted": camera_id}
+
+@router.get("/cameras/{camera_id}/stream")
+async def camera_stream(camera_id: str):
+    return await mjpeg(camera_id)
