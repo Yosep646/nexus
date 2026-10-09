@@ -13,6 +13,7 @@ def connect():
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA busy_timeout=10000")
     connection.execute("PRAGMA foreign_keys=ON")
+    connection.execute("PRAGMA journal_mode=WAL")
     return connection
 
 def init_db():
@@ -34,6 +35,11 @@ def init_db():
         if "review_notes" not in columns:
             db.execute("ALTER TABLE detections ADD COLUMN review_notes TEXT")
         db.execute("CREATE INDEX IF NOT EXISTS idx_detections_review ON detections(review_status)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_detections_camera_date ON detections(camera_id, created_at DESC)")
+        db.execute("""CREATE TABLE IF NOT EXISTS audit_events (
+            id TEXT PRIMARY KEY, event_type TEXT NOT NULL, entity_id TEXT NOT NULL,
+            details TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL)""")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_audit_events_date ON audit_events(created_at DESC)")
 
 def add_camera(name, url):
     from backend.cameras.registry import _validate_url
@@ -86,5 +92,15 @@ def review_detection(detection_id: str, decision: str, notes: str):
             (decision, notes, datetime.now(timezone.utc).isoformat(), detection_id))
         if updated.rowcount != 1:
             return None
+        db.execute("""INSERT INTO audit_events (id,event_type,entity_id,details,created_at)
+                      VALUES (?,?,?,?,?)""",
+                   (str(uuid4()), "detection_review", detection_id, decision,
+                    datetime.now(timezone.utc).isoformat()))
         row = db.execute("SELECT * FROM detections WHERE id=?", (detection_id,)).fetchone()
         return dict(row)
+
+def list_audit_events(limit=100):
+    with connect() as db:
+        return [dict(row) for row in db.execute(
+            "SELECT * FROM audit_events ORDER BY created_at DESC LIMIT ?",
+            (min(max(limit, 1), 500),))]
