@@ -19,3 +19,11 @@ def test_reject_public_ip(tmp_path, monkeypatch):
     with TestClient(app) as client:
         result = client.post("/api/cameras", json={"name": "Invalid", "url": "http://8.8.8.8/video"})
         assert result.status_code == 422
+
+def test_reject_loopback_and_link_local(tmp_path, monkeypatch):
+    monkeypatch.setattr(storage, "DB_PATH", tmp_path / "test.db")
+    monkeypatch.setenv("NEXUS_API_KEY", "test-key-12345678901234567890")
+    with TestClient(app) as client:
+        client.headers.update({"X-API-Key": "test-key-12345678901234567890"})
+        for url in ("http://127.0.0.1:8080/video", "http://169.254.169.254/latest/meta-data", "http://localhost:8080/video"):
+            assert client.post("/api/cameras", json={"name":"Blocked","url":url}).status_code == 422
