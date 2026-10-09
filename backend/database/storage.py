@@ -12,6 +12,7 @@ def connect():
     connection = sqlite3.connect(str(DB_PATH), timeout=10)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA busy_timeout=10000")
+    connection.execute("PRAGMA foreign_keys=ON")
     return connection
 
 def init_db():
@@ -40,16 +41,16 @@ def add_camera(name, url):
 
 def list_cameras():
     with connect() as db:
-        return [dict(r) for r in db.execute("SELECT id,name,url,status FROM cameras ORDER BY created_at DESC")]
+        return [dict(r) for r in db.execute("SELECT id,name,url,status FROM cameras WHERE status != 'deleted' ORDER BY created_at DESC")]
 
 def get_camera(camera_id):
     with connect() as db:
-        row = db.execute("SELECT id,name,url,status FROM cameras WHERE id=?", (camera_id,)).fetchone()
+        row = db.execute("SELECT id,name,url,status FROM cameras WHERE id=? AND status != 'deleted'", (camera_id,)).fetchone()
     return dict(row) if row else None
 
 def remove_camera(camera_id):
     with connect() as db:
-        result = db.execute("DELETE FROM cameras WHERE id=?", (camera_id,))
+        result = db.execute("UPDATE cameras SET status='deleted' WHERE id=? AND status != 'deleted'", (camera_id,))
     return result.rowcount > 0
 
 def save_detection(camera_id, label, confidence):
