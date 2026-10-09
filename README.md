@@ -34,3 +34,18 @@ Instala las dependencias de `requirements.txt`, configura `NEXUS_API_KEY` con un
 ## Seguridad y despliegue
 
 No publiques contraseñas, API Keys, URLs privadas de cámaras ni evidencias sensibles. Usa HTTPS, control de acceso y almacenamiento persistente antes de utilizar NEXUS en producción.
+
+## Instalación opcional de TensorFlow en Railway
+
+La imagen Docker predeterminada mantiene la API ligera y operativa sin pesos entrenados. Para desplegar la inferencia, primero coloca un modelo Keras **entrenado y validado** en el volumen persistente de Railway (`/app/data/models/model.keras`) junto con su metadata compatible (`/app/data/models/metadata.json`). Después selecciona `Dockerfile.ai` como Dockerfile de Railway y configura las variables:
+
+```text
+NEXUS_MODEL_PATH=/app/data/models/model.keras
+NEXUS_MODEL_METADATA_PATH=/app/data/models/metadata.json
+NEXUS_DB_PATH=/app/data/nexus.db
+NEXUS_EVIDENCE_DIR=/app/data/evidence
+```
+
+`Dockerfile.ai` instala TensorFlow CPU mediante `requirements-ai.txt`. No cambies a esa imagen sin verificar límites de memoria, compatibilidad del modelo y recursos del servicio. El modelo no se genera al instalar TensorFlow. Después del despliegue, comprueba `/api/model/status` con autenticación y valida inferencias sobre imágenes de prueba antes de habilitar `NEXUS_MONITOR_ENABLED=true`.
+
+El volumen de Railway tiene un límite de 500 MB en el plan actual. Configura almacenamiento externo para evidencias grandes, políticas de retención y copias de seguridad. Montar un volumen nuevo en `/app/data` puede ocultar datos anteriores guardados dentro del contenedor; comprueba y migra los registros previos antes de asumir que se conservan.
