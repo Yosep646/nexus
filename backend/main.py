@@ -1,8 +1,12 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.api.routes import router
 
-app = FastAPI(title="NEXUS RISK AI", version="0.1.0")
+app = FastAPI(title="NEXUS RISK AI", version="0.2.0")
+# Development origins only. Never use '*' when enabling credentials.
+origins = os.getenv("NEXUS_CORS_ORIGINS", "http://127.0.0.1:5500,http://localhost:5500").split(",")
+app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in origins if o.strip()], allow_methods=["GET","POST","DELETE"], allow_headers=["Content-Type"])
 app.include_router(router, prefix="/api")
 
 @app.get("/health")
