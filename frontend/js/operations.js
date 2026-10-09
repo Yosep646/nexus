@@ -1,5 +1,45 @@
 const $ = id => document.getElementById(id);
 let apiKey = '', map, markers, cameras = [], detections = [], modelReady = false;
+const cameraPreviews = new Map();
+let previewTimer = null;
+async function refreshPreview(cameraId, image, status) {
+  if (!apiKey || !image.isConnected || cameraPreviews.get(cameraId) !== image) return;
+  try {
+    const response = await api('/cameras/'+encodeURIComponent(cameraId)+'/snapshot');
+    const blob = await response.blob();
+    if (!blob.type.startsWith('image/')) throw new Error('Respuesta no es imagen');
+    const url = URL.createObjectURL(blob);
+    const previous = image.dataset.objectUrl;
+    image.onload = () => { if (previous) URL.revokeObjectURL(previous); };
+    image.src = url;
+    image.dataset.objectUrl = url;
+    image.hidden = false;
+    status.textContent = '● Fotogramas recibidos · actualización cada 3 s';
+    status.classList.add('online');
+  } catch (err) {
+    status.textContent = '○ Sin señal · '+err.message;
+    status.classList.remove('online');
+  }
+}
+function stopPreviews() {
+  if (previewTimer) clearInterval(previewTimer);
+  for (const image of cameraPreviews.values()) { if (image.dataset.objectUrl) URL.revokeObjectURL(image.dataset.objectUrl); }
+  cameraPreviews.clear();
+}
+function startPreviews() {
+  stopPreviews();
+  for (const camera of cameras) {
+    const image = document.querySelector('[data-camera-preview="'+CSS.escape(String(camera.id))+'"]');
+    const status = document.querySelector('[data-camera-signal="'+CSS.escape(String(camera.id))+'"]');
+    if (image && status) cameraPreviews.set(String(camera.id), image);
+  }
+  const poll = () => { for (const [id, image] of cameraPreviews) {
+    const status = document.querySelector('[data-camera-signal="'+CSS.escape(id)+'"]');
+    if (status) refreshPreview(id, image, status);
+  }};
+  poll();previewTimer = setInterval(poll,3000);
+}
+
 const message = (s) => { $('message').textContent = s; };
 const escape = (s) => String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const api = async (path, options={}) => {
@@ -11,7 +51,10 @@ function setConnection(label,ok=false){$('connection').textContent=(ok?'● ':'�
 function initMap(){if(!window.L){$('map').textContent='Mapa no disponible: no se pudo cargar el proveedor.';return;}map=L.map('map',{scrollWheelZoom:false}).setView([-9.93,-76.24],7);markers=L.layerGroup().addTo(map);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(map);}
 function getCoordinates(camera){const lat=Number(camera.lat??camera.latitude),lng=Number(camera.lng??camera.longitude);return Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180&&(camera.lat!=null||camera.latitude!=null)&&(camera.lng!=null||camera.longitude!=null)?[lat,lng]:null;}
 function renderMap(){if(!map)return;markers.clearLayers();const bounds=[];for(const camera of cameras){const coord=getCoordinates(camera);if(!coord)continue;const events=detections.filter(d=>String(d.camera_id)===String(camera.id));const latest=events[0];const popup=document.createElement('div');popup.textContent=camera.name+' · '+(latest?latest.label+' · '+Math.round(Number(latest.confidence)*100)+'%':'Sin detecciones');L.circleMarker(coord,{radius:9,color:latest?'#f59e7a':'#36d3e3',fillOpacity:.7}).addTo(markers).bindPopup(popup);bounds.push(coord);}if(bounds.length)map.fitBounds(bounds,{padding:[35,35],maxZoom:13});$('map-note').textContent=bounds.length?'Cámaras georreferenciadas: '+bounds.length+'. Las probabilidades provienen del modelo.':'Ninguna cámara tiene coordenadas verificadas. El mapa conserva la vista regional sin inventar puntos.';}
-function renderCameras(){const grid=$('camera-grid');grid.replaceChildren();if(!cameras.length){grid.innerHTML='<div class="empty">No hay cámaras IP registradas. Añade la primera para iniciar el monitoreo.</div>';return;}for(const camera of cameras){const card=document.createElement('article');card.className='camera';const latest=detections.find(d=>String(d.camera_id)===String(camera.id));const confidence=latest&&Number.isFinite(Number(latest.confidence))?(Number(latest.confidence)*100).toFixed(1)+'%':'—';card.innerHTML='<div class="feed"><span class="feed-icon">▣</span><span class="feed-label">FUENTE IP · VIDEO BAJO AUTORIZACIÓN</span></div><div class="camera-info"><h3>'+escape(camera.name)+'</h3><p>'+escape(latest?latest.label+' · confianza '+confidence:'Sin detecciones registradas')+'</p><div class="camera-actions"><button class="detect">Analizar ahora</button><button class="remove outline">Eliminar</button></div><small class="camera-state">No se afirma transmisión hasta verificar el flujo.</small></div>';card.querySelector('.detect').onclick=async()=>{const state=card.querySelector('.camera-state');state.textContent='Analizando…';try{const result=await api('/cameras/'+encodeURIComponent(camera.id)+'/detect',{method:'POST'});state.textContent=result.status==='ok'?'Análisis completado.':'Sin inferencia: '+(result.status||'modelo no disponible');await loadData();}catch(e){state.textContent='Error: '+e.message}};card.querySelector('.remove').onclick=async()=>{if(!confirm('¿Eliminar esta cámara?'))return;try{await api('/cameras/'+encodeURIComponent(camera.id),{method:'DELETE'});await loadData()}catch(e){message('No se pudo eliminar: '+e.message)}};grid.append(card);}}
+function renderCameras(){const grid=$('camera-grid');stopPreviews();grid.replaceChildren();if(!cameras.length){grid.innerHTML='<div class="empty">No hay cámaras IP registradas. Añade la primera para iniciar el monitoreo.</div>';return;}for(const camera of cameras){const card=document.createElement('article');card.className='camera';const latest=detections.find(d=>String(d.camera_id)===String(camera.id));const confidence=latest&&Number.isFinite(Number(latest.confidence))?(Number(latest.confidence)*100).toFixed(1)+'%':'—';card.innerHTML='<div class="feed"><span class="feed-icon">▣</span><span class="feed-label">FUENTE IP · VIDEO BAJO AUTORIZACIÓN</span></div><div class="camera-info"><h3>'+escape(camera.name)+'</h3><p>'+escape(latest?latest.label+' · confianza '+confidence:'Sin detecciones registradas')+'</p><div class="camera-actions"><button class="detect">Analizar ahora</button><button class="remove outline">Eliminar</button></div><small class="camera-state">No se afirma transmisión hasta verificar el flujo.</small></div>';card.querySelector('.detect').onclick=async()=>{const state=card.querySelector('.camera-state');state.textContent='Analizando…';try{const result=await api('/cameras/'+encodeURIComponent(camera.id)+'/detect',{method:'POST'});state.textContent=result.status==='ok'?'Análisis completado.':'Sin inferencia: '+(result.status||'modelo no disponible');await loadData();}catch(e){state.textContent='Error: '+e.message}};card.querySelector('.remove').onclick=async()=>{if(!confirm('¿Eliminar esta cámara?'))return;try{await api('/cameras/'+encodeURIComponent(camera.id),{method:'DELETE'});await loadData()}catch(e){message('No se pudo eliminar: '+e.message)}};const feed=card.querySelector('.feed');
+const img=document.createElement('img');img.className='camera-preview';img.alt='Fotogramas de '+camera.name;img.hidden=true;img.dataset.cameraPreview=String(camera.id);feed.prepend(img);
+const signal=card.querySelector('.camera-state');signal.dataset.cameraSignal=String(camera.id);
+grid.append(card);}startPreviews();}
 function renderEvents(){const body=$('event-rows');body.replaceChildren();if(!detections.length){body.innerHTML='<tr><td colspan="5">Sin detecciones reales registradas</td></tr>';return;}for(const d of detections.slice(0,100)){const tr=document.createElement('tr');const cam=cameras.find(c=>String(c.id)===String(d.camera_id));const confidence=Number(d.confidence);const date=d.created_at||d.timestamp;const cols=[date?new Date(date).toLocaleString('es-PE'):'—',cam?.name||d.camera_id||'—',d.label||'—',Number.isFinite(confidence)?(confidence*100).toFixed(1)+'%':'—',d.review_status||'—'];for(const val of cols){const td=document.createElement('td');td.textContent=String(val);tr.append(td)}body.append(tr)}}
 function renderChart(stats){const chart=$('chart');chart.replaceChildren();const items=Object.entries(stats.by_label||{}).sort((a,b)=>b[1]-a[1]);if(!items.length){chart.innerHTML='<p class="help">Todavía no hay detecciones registradas.</p>';return;}const max=Math.max(1,...items.map(x=>x[1]));for(const [label,n] of items){const row=document.createElement('div');row.className='bar-row';const name=document.createElement('span');name.textContent=label;const track=document.createElement('div');track.className='track';const bar=document.createElement('i');bar.style.width=(n/max*100)+'%';track.append(bar);const count=document.createElement('strong');count.textContent=n;row.append(name,track,count);chart.append(row)}}
 async function loadData(){if(!apiKey)return;try{const [cams,events,stats,model]=await Promise.all([api('/cameras'),api('/detections?limit=100'),api('/stats'),api('/model/status')]);cameras=Array.isArray(cams)?cams:[];detections=Array.isArray(events)?events:[];modelReady=Boolean(model.ready);$('count-cameras').textContent=cameras.length;$('count-detections').textContent=stats.detections_total??detections.length;$('count-pending').textContent=stats.pending_review??0;$('model-ready').textContent=modelReady?'LISTO':'NO DISPONIBLE';$('model-ready').className='model-state '+(modelReady?'ready':'offline');$('model-detail').textContent=modelReady?'Modelo cargado; resultados sujetos a revisión':'No se puede inferir sin un modelo instalado';renderCameras();renderEvents();renderChart(stats);renderMap();setConnection('API conectada',true);message(modelReady?'Conectado. Datos procedentes del backend NEXUS.':'API conectada. La detección requiere instalar y habilitar un modelo de IA.');}catch(e){setConnection('Acceso no disponible');message('No se pudieron cargar datos operativos: '+e.message);}}

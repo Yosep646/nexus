@@ -34,6 +34,48 @@ def delete_camera(camera_id: str):
 async def camera_stream(camera_id: str):
     return await mjpeg(camera_id)
 
+
+@router.get("/cameras/{camera_id}/snapshot")
+async def camera_snapshot(camera_id: str):
+    """One authenticated JPEG from a phone IP camera, for dashboard previews.
+
+    This is a LAN/private-tunnel feature: public Railway cannot reach RFC1918
+    addresses on a user's Wi-Fi network without a reachable bridge.
+    """
+    import asyncio
+    import cv2
+    from backend.cameras.registry import _validate_url
+    camera = storage.get_camera(camera_id)
+    if camera is None:
+        raise HTTPException(status_code=404, detail="Camera not found")
+    try:
+        _validate_url(camera["url"])
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    def capture_jpeg():
+        capture = cv2.VideoCapture(camera["url"])
+        try:
+            if not capture.isOpened():
+                return None
+            ok, frame = capture.read()
+            if not ok:
+                return None
+            encoded_ok, jpeg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 78])
+            return jpeg.tobytes() if encoded_ok else None
+        finally:
+            capture.release()
+
+    try:
+        data = await asyncio.wait_for(asyncio.to_thread(capture_jpeg), timeout=12)
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Camera did not respond in time")
+    if data is None:
+        raise HTTPException(status_code=503, detail="Camera is unreachable or its video format is unsupported")
+    return Response(content=data, media_type="image/jpeg", headers={
+        "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"
+    })
+
 @router.get("/model/status")
 def model_status():
     return {"ready": detector.ready, "labels": detector.labels}
