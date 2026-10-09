@@ -42,9 +42,20 @@ async def detect(camera_id: str):
     result = await classify_camera(camera_id)
     if result.get("status") == "ok" and result.get("predictions"):
         top = result["predictions"][0]
-        storage.save_detection(camera_id, top["label"], top["confidence"])
         result["review"] = evaluate(top["label"], top["confidence"])
+        storage.save_detection(camera_id, top["label"], top["confidence"], result["review"]["status"])
     return result
+
+class ReviewInput(BaseModel):
+    decision: str = Field(pattern="^(confirmed|dismissed)$")
+    notes: str = Field(default="", max_length=1000)
+
+@router.patch("/detections/{detection_id}/review")
+def review_detection(detection_id: str, payload: ReviewInput):
+    reviewed = storage.review_detection(detection_id, payload.decision, payload.notes)
+    if reviewed is None:
+        raise HTTPException(status_code=409, detail="Detection not pending review or not found")
+    return reviewed
 
 @router.get("/detections")
 def detections(limit: int = Query(100, ge=1, le=500)):
