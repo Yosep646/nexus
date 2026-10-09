@@ -140,3 +140,11 @@ def download_evidence(detection_id: str, evidence_id: str):
         raise HTTPException(status_code=404, detail="Evidence unavailable")
     return Response(content=data, media_type="image/jpeg",
                     headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
+
+@router.get("/reports/detections.pdf")
+def detection_report(limit: int = Query(200, ge=1, le=500)):
+    """Authenticated PDF summary; events are not claims of confirmed disasters."""
+    from backend.reports.pdf import build_report
+    return Response(content=build_report(limit), media_type="application/pdf",
+                    headers={"Content-Disposition": 'attachment; filename="nexus-detections.pdf"',
+                             "Cache-Control": "private, no-store"})
