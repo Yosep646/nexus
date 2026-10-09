@@ -13,7 +13,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="NEXUS RISK AI", version="0.4.0", lifespan=lifespan)
 origins = os.getenv("NEXUS_CORS_ORIGINS", "http://127.0.0.1:5500,http://localhost:5500").split(",")
-app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in origins if o.strip()], allow_methods=["GET","POST","DELETE"], allow_headers=["Content-Type"])
+app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in origins if o.strip()], allow_methods=["GET","POST","PATCH","DELETE"], allow_headers=["Content-Type","X-API-Key"])
 app.include_router(router, prefix="/api", dependencies=[Depends(require_api_key)])
 
 @app.get("/health")
