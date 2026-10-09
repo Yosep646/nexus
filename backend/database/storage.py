@@ -13,11 +13,11 @@ def connect():
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA busy_timeout=10000")
     connection.execute("PRAGMA foreign_keys=ON")
-    connection.execute("PRAGMA journal_mode=WAL")
     return connection
 
 def init_db():
     with connect() as db:
+        db.execute("PRAGMA journal_mode=WAL")
         db.execute("""CREATE TABLE IF NOT EXISTS cameras (
             id TEXT PRIMARY KEY, name TEXT NOT NULL, url TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'registered', created_at TEXT NOT NULL)""")
