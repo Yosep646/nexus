@@ -1,0 +1,29 @@
+name: Public demo checks
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/public-demo-ci.yml'
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate public entry and assets
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          root = Path("frontend")
+          for name in ("index.html", "demo.html", "js/demo.js", "css/demo.css"):
+              assert (root / name).is_file(), f"Missing public asset: {name}"
+          entry = (root / "index.html").read_text(encoding="utf-8")
+          assert "./demo.html" in entry
+          demo = (root / "demo.html").read_text(encoding="utf-8")
+          assert "MODO DEMO" in demo, "Public demo must disclose simulated data"
+          print("Public demo smoke checks passed")
+          PY
