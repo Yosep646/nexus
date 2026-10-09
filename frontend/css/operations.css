@@ -13,3 +13,21 @@
 .advisory p{font-size:11px;color:#d4dce7;line-height:1.55}
 .advisory small{font-size:10px;color:#91a8c0}
 @media(min-width:1550px){.camera-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* NEXUS professional incident command center */
+.alert-strip{display:flex;align-items:center;gap:15px;border:1px solid #244960;background:linear-gradient(110deg,#102b40,#0a1a2d);border-radius:12px;padding:16px 19px;margin-bottom:13px;box-shadow:inset 3px 0 #32c9dc}
+.alert-strip.alert-active{border-color:#9a5138;background:linear-gradient(105deg,#39211f,#171b2b);box-shadow:inset 4px 0 #f78c63}
+.alert-strip.alert-observed{border-color:#76613a;box-shadow:inset 4px 0 #d9af5a}
+.alert-icon{font-size:27px;color:#f6b77c}
+.alert-strip strong{font-size:12px;letter-spacing:.09em}
+.alert-strip p{font-size:11px;color:#aac1d3;line-height:1.5;margin:6px 0 0}
+.alert-jump{margin-left:auto;white-space:nowrap;color:#7edbea;font-size:11px;font-weight:800}
+.status-ribbon{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;padding:10px 15px;border:1px solid #1e3b50;background:#0b2031;border-radius:9px;margin-bottom:15px;font-size:10px;color:#83b1c8;letter-spacing:.08em}
+.led{display:inline-block;width:7px;height:7px;border-radius:50%;background:#2de4bb;margin-right:7px;box-shadow:0 0 8px #2de4bb}
+.alert-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.alert-actions select{background:#0a1a2c;border:1px solid #31506b;color:#c4dbe9;border-radius:7px;padding:9px;font-size:11px}
+.alert-count{font-size:10px;color:#82a9c0;margin-bottom:11px}
+.review-actions{display:flex;gap:8px;margin-top:12px}
+.review-actions button{font-size:10px;padding:8px 11px}
+.advisory{border-left-width:4px}
+@media(max-width:650px){.alert-strip{align-items:flex-start;flex-wrap:wrap}.alert-jump{margin-left:0}.status-ribbon{gap:7px}.alert-actions{width:100%}}
