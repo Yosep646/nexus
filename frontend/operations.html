@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEXUS | Operaciones</title><link rel="stylesheet" href="./css/styles.css"></head>
+<body><main class="shell">
+<header><div><p class="eyebrow">NEXUS RISK AI · OPERACIONES</p><h1>Centro de <span>monitoreo</span></h1><p>Datos del servidor · Sin simulaciones</p></div><a href="./demo.html">Abrir demostración</a></header>
+<section class="panel"><h2>Conectar al servidor privado</h2><p>Esta consola es para redes de confianza. Nunca uses la clave de producción en un sitio público.</p>
+<form id="connection"><label>API URL<input id="api-url" value="http://127.0.0.1:8000/api" required></label><label>Clave de acceso<input id="api-key" type="password" autocomplete="off" required></label><button>Conectar</button></form><p id="connection-status" role="status">Desconectado</p></section>
+<section class="grid" aria-label="Indicadores"><article class="panel"><h2>Cámaras</h2><h1 id="camera-count">—</h1></article><article class="panel"><h2>Detecciones</h2><h1 id="event-count">—</h1></article><article class="panel"><h2>Pendientes</h2><h1 id="pending-count">—</h1></article><article class="panel"><h2>Confirmadas</h2><h1 id="confirmed-count">—</h1></article></section>
+<section class="panel"><div class="section-head"><h2>Cámaras conectadas al registro</h2><button id="reload" type="button">Actualizar</button></div><div id="cameras" class="grid"></div></section>
+<section class="panel"><h2>Eventos detectados</h2><form id="filters"><label>Estado<select id="review-filter"><option value="">Todos</option><option value="pending_human_review">Pendientes</option><option value="confirmed">Confirmados</option><option value="dismissed">Descartados</option><option value="informational">Informativos</option></select></label><button>Filtrar</button></form><div class="table-scroll"><table><thead><tr><th>Fecha</th><th>Cámara</th><th>Fenómeno</th><th>Confianza</th><th>Revisión</th></tr></thead><tbody id="events"></tbody></table></div></section>
+<footer>Una predicción no equivale a una alerta confirmada. Verificar en campo antes de actuar.</footer></main>
+<script type="module" src="./js/operations.js"></script></body></html>
