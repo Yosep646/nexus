@@ -5,6 +5,7 @@ import cv2
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from backend.database.storage import get_camera
+from backend.cameras.registry import _validate_url
 
 _executor = ThreadPoolExecutor(max_workers=4)
 
@@ -27,6 +28,10 @@ async def mjpeg(camera_id: str):
     camera = get_camera(camera_id)
     if camera is None:
         raise HTTPException(status_code=404, detail="Camera not found")
+    try:
+        _validate_url(camera["url"])
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     iterator = _frames(camera["url"])
     async def generate():
         loop = asyncio.get_running_loop()
