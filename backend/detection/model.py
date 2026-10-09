@@ -18,6 +18,8 @@ class Detector:
         if METADATA.exists():
             data = json.loads(METADATA.read_text(encoding="utf-8"))
             self.labels = data.get("labels", LABELS)
+            if not isinstance(self.labels, list) or len(self.labels) != 5 or any(not isinstance(x, str) for x in self.labels):
+                raise ValueError("Model metadata must contain exactly five class labels")
             self.preprocessing = data.get("preprocessing", "external_minus_one_to_one")
         if KERAS_MODEL.exists():
             import tensorflow as tf
@@ -39,6 +41,8 @@ class Detector:
             batch = batch / 127.5 - 1.0
         batch = batch[None, ...]
         scores = np.asarray(self.model.predict(batch, verbose=0))[0]
+        if scores.ndim != 1 or len(scores) != len(self.labels) or not np.all(np.isfinite(scores)):
+            raise ValueError("Model output does not match configured labels")
         results = sorted(({"label": label, "confidence": float(score)}
                           for label, score in zip(self.labels, scores)), key=lambda x: -x["confidence"])
         return {"status": "ok", "predictions": results}
