@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from backend.cameras.registry import add_camera, list_cameras, remove_camera
 from backend.cameras.stream import mjpeg
+from backend.detection.model import detector
+from backend.detection.service import classify_camera
 
 router = APIRouter()
 
@@ -29,3 +31,11 @@ def delete_camera(camera_id: str):
 @router.get("/cameras/{camera_id}/stream")
 async def camera_stream(camera_id: str):
     return await mjpeg(camera_id)
+
+@router.get("/model/status")
+def model_status():
+    return {"ready": detector.ready, "labels": detector.labels}
+
+@router.post("/cameras/{camera_id}/detect")
+async def detect(camera_id: str):
+    return await classify_camera(camera_id)
