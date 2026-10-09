@@ -1,4 +1,9 @@
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import Response
+import logging
+from backend.evidence.service import store_frame, load_evidence
+
+logger = logging.getLogger(__name__)
 from backend.api.schemas import CameraCreate, ReviewRequest
 from backend.database import storage
 from backend.cameras.stream import mjpeg
@@ -36,10 +41,18 @@ def model_status():
 @router.post("/cameras/{camera_id}/detect")
 async def detect(camera_id: str):
     result = await classify_camera(camera_id)
+    frame = result.pop("_frame", None)
     if result.get("status") == "ok" and result.get("predictions"):
         top = result["predictions"][0]
         result["review"] = evaluate(top["label"], top["confidence"])
-        storage.save_detection(camera_id, top["label"], top["confidence"], result["review"]["status"])
+        event = storage.save_detection(camera_id, top["label"], top["confidence"], result["review"]["status"])
+        result["detection_id"] = event["id"]
+        if frame is not None:
+            try:
+                result["evidence"] = store_frame(event["id"], frame)
+            except Exception:
+                logger.exception("Evidence storage failed for detection %s", event["id"])
+                result["evidence_status"] = "storage_failed"
     return result
 
 @router.patch("/detections/{detection_id}/review")
@@ -117,3 +130,13 @@ def evidence_for_detection(detection_id: str):
     if exists is None:
         raise HTTPException(status_code=404, detail="Detection not found")
     return storage.list_evidence(detection_id)
+
+@router.get("/detections/{detection_id}/evidence/{evidence_id}/image")
+def download_evidence(detection_id: str, evidence_id: str):
+    """Return a verified JPEG under the same API-key protection as other routes."""
+    try:
+        data = load_evidence(detection_id, evidence_id)
+    except (ValueError, FileNotFoundError):
+        raise HTTPException(status_code=404, detail="Evidence unavailable")
+    return Response(content=data, media_type="image/jpeg",
+                    headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
