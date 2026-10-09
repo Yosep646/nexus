@@ -4,7 +4,9 @@ from backend.database import storage
 
 def test_camera_lifecycle(tmp_path, monkeypatch):
     monkeypatch.setattr(storage, "DB_PATH", tmp_path / "test.db")
+    monkeypatch.setenv("NEXUS_API_KEY", "test-key-12345678901234567890")
     with TestClient(app) as client:
+        client.headers.update({"X-API-Key":"test-key-12345678901234567890"})
         created = client.post("/api/cameras", json={"name": "Test", "url": "http://192.168.1.20:8080/video"})
         assert created.status_code == 201
         camera_id = created.json()["id"]
