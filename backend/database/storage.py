@@ -73,7 +73,7 @@ def list_cameras():
 
 def get_camera(camera_id):
     with connect() as db:
-        row = db.execute("SELECT id,name,url,status FROM cameras WHERE id=? AND status != 'deleted'", (camera_id,)).fetchone()
+        row = db.execute("SELECT id,name,url,status,latitude,longitude FROM cameras WHERE id=? AND status != 'deleted'", (camera_id,)).fetchone()
     return dict(row) if row else None
 
 def remove_camera(camera_id):
