@@ -31,3 +31,10 @@
 .review-actions button{font-size:10px;padding:8px 11px}
 .advisory{border-left-width:4px}
 @media(max-width:650px){.alert-strip{align-items:flex-start;flex-wrap:wrap}.alert-jump{margin-left:0}.status-ribbon{gap:7px}.alert-actions{width:100%}}
+
+/* Keep the Leaflet map inside the dashboard grid at its correct calculated size. */
+.map-panel{min-width:0;overflow:hidden}
+.map-panel #map{display:block;position:relative;width:100%;height:385px;min-height:385px;isolation:isolate}
+.map-panel #map .leaflet-container{width:100%;height:100%}
+.map-panel .leaflet-tile-pane img{max-width:none!important;max-height:none!important}
+@media(max-width:750px){.map-panel #map{height:320px;min-height:320px}}
