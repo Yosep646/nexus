@@ -7,4 +7,4 @@ RUN pip install --no-cache-dir -r requirements.txt "tensorflow-cpu>=2.16,<2.19"
 COPY backend ./backend
 RUN mkdir -p /app/data /app/models/teachable_machine
 EXPOSE 8000
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "exec uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
