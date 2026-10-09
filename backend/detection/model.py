@@ -4,6 +4,7 @@ Model inference is optional until converted weights are installed locally.
 from pathlib import Path
 import json
 import numpy as np
+from backend.detection.labels import normalize_labels
 
 LABELS = ["deslizamiento de tierra", "huayco", "inundacion", "normal", "sequia"]
 MODEL_DIR = Path(__file__).resolve().parents[2] / "models" / "teachable_machine"
@@ -13,13 +14,11 @@ METADATA = MODEL_DIR / "metadata.json"
 class Detector:
     def __init__(self):
         self.model = None
-        self.labels = LABELS
+        self.labels = normalize_labels(LABELS)
         self.preprocessing = 'external_minus_one_to_one'
         if METADATA.exists():
             data = json.loads(METADATA.read_text(encoding="utf-8"))
-            self.labels = data.get("labels", LABELS)
-            if not isinstance(self.labels, list) or len(self.labels) != 5 or any(not isinstance(x, str) for x in self.labels):
-                raise ValueError("Model metadata must contain exactly five class labels")
+            self.labels = normalize_labels(data.get("labels", LABELS))
             self.preprocessing = data.get("preprocessing", "external_minus_one_to_one")
         if KERAS_MODEL.exists():
             import tensorflow as tf
