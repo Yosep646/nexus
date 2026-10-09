@@ -1,4 +1,4 @@
-"""Temporary in-memory camera registry. Replace with persistent storage and authenticated access."""
+"""Validate private-network camera addresses before persistent registration."""
 from ipaddress import ip_address, ip_network
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -18,6 +18,14 @@ def _validate_url(url: str) -> None:
         raise ValueError("Camera must use a numeric RFC1918 LAN IPv4 address")
     if parsed.fragment or parsed.username or parsed.password:
         raise ValueError("Do not embed credentials in camera URLs")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("Invalid camera port") from exc
+    if port is not None and not 1 <= port <= 65535:
+        raise ValueError("Invalid camera port")
+    if parsed.scheme in ("http", "https") and parsed.path.startswith("//"):
+        raise ValueError("Invalid camera URL path")
 
 def add_camera(name: str, url: str) -> dict:
     _validate_url(url)
