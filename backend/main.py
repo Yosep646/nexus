@@ -1,4 +1,6 @@
 import os
+import asyncio
+from backend.detection.monitor import monitor_loop
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,7 +11,18 @@ from backend.security import require_api_key
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    yield
+    task = None
+    if os.getenv("NEXUS_MONITOR_ENABLED", "false").lower() == "true":
+        task = asyncio.create_task(monitor_loop())
+    try:
+        yield
+    finally:
+        if task is not None:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
 
 app = FastAPI(title="NEXUS RISK AI", version="0.4.0", lifespan=lifespan)
 origins = os.getenv("NEXUS_CORS_ORIGINS", "http://127.0.0.1:5500,http://localhost:5500").split(",")
