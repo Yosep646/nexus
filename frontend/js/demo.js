@@ -83,5 +83,15 @@ import { renderReport } from './reports.js';
     setTimeout(()=>URL.revokeObjectURL(url),1000);
   });
   const clock=()=>{$('clock').textContent=new Date().toLocaleString('es-PE');};
+  if (window.L) {
+    const map = L.map('demo-map', {scrollWheelZoom:false}).setView([-9.93, -76.24], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution:'&copy; OpenStreetMap contributors', maxZoom:19
+    }).addTo(map);
+    L.circleMarker([-9.93, -76.24], {radius:9,color:'#20c7d8',fillOpacity:0.65})
+      .addTo(map).bindPopup('Huánuco · Centro de referencia demostrativo. No representa una cámara conectada.');
+  } else {
+    $('demo-map').textContent = 'Mapa no disponible sin conexión a internet.';
+  }
   clock();setInterval(clock,30000);render();
 })();
