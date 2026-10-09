@@ -148,3 +148,8 @@ def detection_report(limit: int = Query(200, ge=1, le=500)):
     return Response(content=build_report(limit), media_type="application/pdf",
                     headers={"Content-Disposition": 'attachment; filename="nexus-detections.pdf"',
                              "Cache-Control": "private, no-store"})
+
+@router.get("/notifications")
+def notifications(limit: int = Query(100, ge=1, le=500)):
+    """Confirmed alerts awaiting delivery; no external dispatch is implied."""
+    return storage.list_notifications(limit)
