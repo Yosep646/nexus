@@ -23,6 +23,10 @@ class Detector:
         if KERAS_MODEL.exists():
             import tensorflow as tf
             self.model = tf.keras.models.load_model(KERAS_MODEL, compile=False)
+        elif (MODEL_DIR / "model.json").exists():
+            # A raw TensorFlow.js export is not a Keras model.
+            # Keep inference unavailable instead of pretending weights are loaded.
+            self.model = None
 
     @property
     def ready(self):
