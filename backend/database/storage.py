@@ -45,6 +45,10 @@ def init_db():
             filename TEXT NOT NULL, sha256 TEXT NOT NULL, created_at TEXT NOT NULL,
             FOREIGN KEY(detection_id) REFERENCES detections(id))""")
         db.execute("CREATE INDEX IF NOT EXISTS idx_evidence_detection ON evidence(detection_id)")
+        db.execute("""CREATE TABLE IF NOT EXISTS notifications (
+            id TEXT PRIMARY KEY, detection_id TEXT NOT NULL UNIQUE,
+            status TEXT NOT NULL DEFAULT 'queued', created_at TEXT NOT NULL,
+            FOREIGN KEY(detection_id) REFERENCES detections(id))""")
 
 def add_camera(name, url):
     from backend.cameras.registry import _validate_url
@@ -101,6 +105,11 @@ def review_detection(detection_id: str, decision: str, notes: str):
                       VALUES (?,?,?,?,?)""",
                    (str(uuid4()), "detection_review", detection_id, decision,
                     datetime.now(timezone.utc).isoformat()))
+        if decision == "confirmed":
+            db.execute("""INSERT OR IGNORE INTO notifications (id,detection_id,status,created_at)
+                          VALUES (?,?,?,?)""",
+                       (str(uuid4()), detection_id, "queued",
+                        datetime.now(timezone.utc).isoformat()))
         row = db.execute("SELECT * FROM detections WHERE id=?", (detection_id,)).fetchone()
         return dict(row)
 
@@ -127,3 +136,9 @@ def list_evidence(detection_id):
     with connect() as db:
         return [dict(row) for row in db.execute(
             "SELECT * FROM evidence WHERE detection_id=? ORDER BY created_at DESC", (detection_id,))]
+
+def list_notifications(limit=100):
+    with connect() as db:
+        return [dict(row) for row in db.execute(
+            "SELECT * FROM notifications ORDER BY created_at DESC LIMIT ?",
+            (min(max(limit, 1), 500),))]
