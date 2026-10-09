@@ -1,0 +1,12 @@
+FROM python:3.11-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0 libgl1 && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt requirements-ai.txt ./
+RUN pip install --no-cache-dir -r requirements-ai.txt
+COPY backend ./backend
+COPY frontend ./frontend
+RUN mkdir -p /app/data /app/models/teachable_machine
+ENV NEXUS_MODEL_PATH=/app/data/models/model.keras NEXUS_MODEL_METADATA_PATH=/app/data/models/metadata.json NEXUS_DB_PATH=/app/data/nexus.db NEXUS_EVIDENCE_DIR=/app/data/evidence
+EXPOSE 8000
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

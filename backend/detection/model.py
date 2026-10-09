@@ -2,6 +2,7 @@
 Model inference is optional until converted weights are installed locally.
 """
 from pathlib import Path
+import os
 import json
 import logging
 import numpy as np
@@ -11,8 +12,8 @@ from backend.detection.labels import normalize_labels
 
 LABELS = ["deslizamiento de tierra", "huayco", "inundacion", "normal", "sequia"]
 MODEL_DIR = Path(__file__).resolve().parents[2] / "models" / "teachable_machine"
-KERAS_MODEL = MODEL_DIR / "model.keras"
-METADATA = MODEL_DIR / "metadata.json"
+KERAS_MODEL = Path(os.getenv("NEXUS_MODEL_PATH", str(MODEL_DIR / "model.keras")))
+METADATA = Path(os.getenv("NEXUS_MODEL_METADATA_PATH", str(MODEL_DIR / "metadata.json")))
 
 class Detector:
     def __init__(self):
