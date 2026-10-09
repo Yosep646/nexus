@@ -3,6 +3,9 @@ import asyncio
 from backend.detection.monitor import monitor_loop
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
+from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from backend.database.storage import init_db
 from backend.api.routes import router
@@ -32,3 +35,16 @@ app.include_router(router, prefix="/api", dependencies=[Depends(require_api_key)
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "nexus-risk-ai"}
+
+
+# Serve the public demonstration dashboard from the same Railway hostname.
+# API routes remain protected by X-API-Key; the demo contains simulated data.
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+if FRONTEND_DIR.is_dir():
+    app.mount("/dashboard", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="dashboard")
+
+@app.get("/", include_in_schema=False)
+def home():
+    if FRONTEND_DIR.is_dir():
+        return RedirectResponse(url="/dashboard/demo.html", status_code=307)
+    return {"service": "nexus-risk-ai", "status": "ok", "health": "/health", "docs": "/docs"}
