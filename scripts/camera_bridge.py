@@ -25,14 +25,20 @@ def main():
     endpoint=a.server.rstrip("/")+"/api/cameras/"+a.camera_id+"/frame"
     delay=1/a.fps
     while True:
-        cap=cv2.VideoCapture(a.camera_url)
+        # FFmpeg-first IP capture, as in the previous working project.
+        cap=cv2.VideoCapture(a.camera_url, cv2.CAP_FFMPEG)
+        if not cap.isOpened():
+            cap.release()
+            cap=cv2.VideoCapture(a.camera_url, cv2.CAP_ANY)
+        if cap.isOpened():
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         if not cap.isOpened():
             print("Camera unavailable; retrying in 5s",flush=True);cap.release();time.sleep(5);continue
         try:
             while True:
                 start=time.monotonic()
                 ok,frame=cap.read()
-                if not ok: break
+                if not ok or frame is None: break
                 h,w=frame.shape[:2]
                 if w>1280:
                     frame=cv2.resize(frame,(1280,round(h*1280/w)))
