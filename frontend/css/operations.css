@@ -83,3 +83,31 @@ main{padding-top:28px}
 .map-tools button[aria-pressed="true"]{border-color:#3bd4e9;background:#103d4b;color:#d9fbff}
 @media(max-width:750px){.top{align-items:flex-start}.top h1{font-size:clamp(22px,6vw,29px)}.head-right{width:100%;justify-content:space-between}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace,.primary-col,.secondary-col{min-width:0;width:100%}.camera-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}.map-panel{padding:12px}.map-panel .panel-head{align-items:flex-start}.map-tools{width:100%}.map-tools button{flex:1}.map-panel #map{height:min(65vh,510px);min-height:330px}.camera-form input{font-size:16px}.auth input{font-size:16px}.panel{margin-bottom:12px}}
 @media(max-width:420px){.metrics{gap:7px}.tile{min-height:115px}.tile strong{font-size:26px}.rail nav{gap:3px}.rail nav a{padding:10px 8px;font-size:11px}.camera-grid{grid-template-columns:1fr}.map-panel #map{height:390px;min-height:390px}.status-ribbon{font-size:9px}}
+
+
+/* Hackathon operations console: readable, camera-first, responsive. */
+:root{--nexus-bg:#050c17;--nexus-panel:#0c1b2b;--nexus-line:#223d55;--nexus-accent:#2cd7ed}
+body{background:radial-gradient(ellipse 80% 50% at 75% -10%,#12304a 0%,transparent 70%),var(--nexus-bg);letter-spacing:.005em}
+.rail{background:linear-gradient(180deg,#071322,#081727 75%,#06101e);box-shadow:8px 0 38px #0000001f}
+.brand{letter-spacing:.055em}.brand small{letter-spacing:.19em}
+.rail nav a{border-radius:10px;transition:background .18s,color .18s,transform .18s}
+.rail nav a:hover,.rail nav a:focus-visible{background:#14354b;color:#d6faff;transform:translateX(3px)}
+.top h1{letter-spacing:-.035em;font-weight:800}
+.top .sub{max-width:660px;line-height:1.55}
+.tile,.panel{border:1px solid var(--nexus-line);border-radius:17px;background:linear-gradient(160deg,#102438 0%,#091827 90%);box-shadow:0 12px 36px #00000026}
+.tile{transition:transform .18s,border-color .18s}.tile:hover{transform:translateY(-2px);border-color:#37647d}
+.tile span{letter-spacing:.09em}.tile strong{letter-spacing:-.04em}
+.panel h2{font-weight:800;letter-spacing:-.02em}
+.camera-grid{gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+.camera{overflow:hidden;border:1px solid #2c4e68;border-radius:14px;background:#071523;box-shadow:0 8px 22px #0004}
+.camera .feed{height:auto;min-height:220px;aspect-ratio:16/9;max-height:440px;background:radial-gradient(circle at 50% 42%,#153b4d,#06101d 70%);position:relative}
+.camera .feed img,.camera .feed video{object-fit:contain;max-width:100%;max-height:100%}
+.camera-state{line-height:1.5}
+button{transition:filter .15s,transform .15s,box-shadow .15s}
+button:hover{transform:translateY(-1px);box-shadow:0 4px 14px #00a9c426}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #69e9f5;outline-offset:2px}
+#message{line-height:1.55}
+.map-panel #map{border-radius:14px;border-color:#31506a}
+@media(max-width:1100px){.shell{grid-template-columns:200px minmax(0,1fr)}.camera-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}}
+@media(max-width:750px){.shell{display:block}.camera .feed{min-height:190px}.top h1{line-height:1.15}.tile{border-radius:12px}.panel{border-radius:13px}}
+@media(prefers-reduced-motion:reduce){.tile,.rail nav a,button{transition:none!important}}
