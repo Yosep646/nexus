@@ -83,3 +83,18 @@ python scripts/train_disaster_classifier.py --data dataset --output data/trained
 ```
 
 El entrenamiento utiliza MobileNetV2 preentrenado y aumentos **solo en entrenamiento**, guarda `model.keras` y evalúa el conjunto de prueba independiente. La evaluación debe complementarse con matriz de confusión, revisión de falsos positivos y validación de escenarios locales antes de generar alertas. La nueva versión no sustituye automáticamente al modelo original ni está activada en Railway hasta ser validada.
+
+## Puente local para cámaras IP en Railway
+
+Railway no puede acceder directamente a direcciones LAN `192.168.x.x`. Desde un PC Windows **en la misma Wi-Fi que el teléfono**, el agente `scripts/camera_bridge.py` lee el MJPEG local y envía JPEGs hacia Railway por HTTPS autenticado. El dashboard muestra los últimos fotogramas recientes cada ~3 segundos, **no una transmisión de video continua ni inferencia IA**.
+
+1. Registra la cámara en NEXUS y copia su ID (desde la respuesta API `GET /api/cameras` o la interfaz de documentación `/docs`, autenticada).
+2. En PowerShell en la carpeta del proyecto, instala `pip install opencv-python-headless`.
+3. Define `$env:NEXUS_API_KEY = 'TU_CLAVE'` únicamente en tu terminal local; nunca subas la clave a GitHub.
+4. Ejecuta:
+```powershell
+python scripts/camera_bridge.py --camera-url "http://192.168.0.16:8080/video" --camera-id "ID-DE-TU-CAMARA" --server "https://nexus-production-6562.up.railway.app" --fps 2
+```
+5. Mantén el PC encendido y el agente ejecutándose. Repite el agente por cámara con su ID correspondiente. El servidor rechaza JPEGs corruptos o mayores de 2 MB y no publica las imágenes sin la API Key.
+
+La ruta `POST /api/cameras/{id}/frame` recibe JPEGs, `GET /api/cameras/{id}/frame` muestra solo imágenes recientes (menos de 15 s). Este puente es de **captura visual**: la inferencia del modelo entrenado y el procesamiento continuo de eventos siguen pendientes. Para producción conviene una credencial exclusiva de ingestión por cámara y límites de tasa.
