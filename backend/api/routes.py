@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 import logging
@@ -71,6 +71,58 @@ async def camera_snapshot(camera_id: str):
     return Response(content=data, media_type="image/jpeg",
                     headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
 
+
+
+# LAN camera bridge: a trusted local agent pushes JPEG frames outward over HTTPS.
+@router.post("/cameras/{camera_id}/frame")
+async def receive_camera_frame(camera_id: str, request: Request):
+    from pathlib import Path
+    import os
+    from PIL import Image
+    from io import BytesIO
+    from datetime import datetime, timezone
+    from backend.database.storage import get_camera
+    if get_camera(camera_id) is None:
+        raise HTTPException(status_code=404, detail="Camera not found")
+    if request.headers.get("content-type", "").split(";")[0].strip().lower() != "image/jpeg":
+        raise HTTPException(status_code=415, detail="Expected image/jpeg")
+    if request.headers.get("content-length") and int(request.headers["content-length"]) > 2_000_000:
+        raise HTTPException(status_code=413, detail="Frame too large")
+    frame = await request.body()
+    if len(frame) > 2_000_000 or len(frame) < 100:
+        raise HTTPException(status_code=413, detail="Invalid frame size")
+    try:
+        with Image.open(BytesIO(frame)) as image:
+            if image.format != "JPEG" or image.width > 4096 or image.height > 4096:
+                raise ValueError("Unsupported image")
+            image.verify()
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail="Invalid JPEG frame") from exc
+    directory = Path(os.getenv("NEXUS_CAMERA_FRAMES_DIR", "/app/data/camera_frames" if Path("/app/data").is_dir() else "data/camera_frames"))
+    directory.mkdir(parents=True, exist_ok=True)
+    target = directory / (camera_id + ".jpg")
+    temp = directory / (camera_id + ".tmp")
+    temp.write_bytes(frame)
+    temp.replace(target)
+    return {"status": "received", "camera_id": camera_id, "timestamp": datetime.now(timezone.utc).isoformat()}
+
+@router.get("/cameras/{camera_id}/frame")
+def latest_camera_frame(camera_id: str):
+    from pathlib import Path
+    import os
+    from datetime import datetime, timezone
+    from backend.database.storage import get_camera
+    if get_camera(camera_id) is None:
+        raise HTTPException(status_code=404, detail="Camera not found")
+    directory = Path(os.getenv("NEXUS_CAMERA_FRAMES_DIR", "/app/data/camera_frames" if Path("/app/data").is_dir() else "data/camera_frames"))
+    target = directory / (camera_id + ".jpg")
+    if not target.is_file():
+        raise HTTPException(status_code=404, detail="No frame received from local agent")
+    age = datetime.now(timezone.utc).timestamp() - target.stat().st_mtime
+    if age > 15:
+        raise HTTPException(status_code=503, detail="Local agent offline: last frame is stale")
+    return Response(content=target.read_bytes(), media_type="image/jpeg",
+                    headers={"Cache-Control": "private, no-store", "X-Frame-Age-Seconds": str(round(age, 2))})
 
 @router.get("/risk-advisories")
 def risk_advisories():
