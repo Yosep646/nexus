@@ -48,49 +48,54 @@ def main():
     endpoint = SERVER + "/api/cameras/" + camera["id"] + "/frame"
     print("Fuente:", url)
     print("Enviando imagenes por HTTPS. Para detener, cierra esta ventana o presiona Ctrl+C.")
+    import cv2
     while True:
-        try:
-            with urllib.request.urlopen(url, timeout=12) as stream:
-                buffer = bytearray()
-                last_sent = 0
-                while True:
-                    chunk = stream.read(8192)
-                    if not chunk:
-                        raise ConnectionError("La camara cerro la conexion")
-                    buffer.extend(chunk)
-                    start = buffer.find(bytes((255,216)))
-                    if start < 0:
-                        buffer.clear()
-                        continue
-                    if start:
-                        del buffer[:start]
-                    end = buffer.find(bytes((255,217)), 2)
-                    if end < 0:
-                        if len(buffer) > MAX_FRAME:
-                            buffer.clear()
-                        continue
-                    frame = bytes(buffer[:end+2])
-                    del buffer[:end+2]
-                    if len(frame) > MAX_FRAME or time.monotonic()-last_sent < 0.8:
-                        continue
-                    try:
-                        with request(endpoint, key, frame) as result:
-                            if result.status != 200:
-                                print("Error de envio HTTP", result.status)
-                        last_sent = time.monotonic()
-                        print("Fotograma enviado:", time.strftime("%H:%M:%S"), end="\\r", flush=True)
-                    except urllib.error.HTTPError as error:
-                        print("\\nServidor rechazo el fotograma:", error.code, error.read(200).decode("utf-8", "replace"))
-                        if error.code in (401,403,404):
-                            return 1
-                    except Exception as error:
-                        print("\\nProblema de red:", error)
-        except KeyboardInterrupt:
-            print("\\nPuente detenido.")
-            return 0
-        except Exception as error:
-            print("\\nNo se pudo leer la camara IP:", error, "| reintentando en 5 s")
+        cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+        if not cap.isOpened():
+            cap.release()
+            cap = cv2.VideoCapture(url, cv2.CAP_ANY)
+        if not cap.isOpened():
+            print("No se pudo conectar con la IP; reintentando en 5 s")
             time.sleep(5)
+            continue
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        try:
+            last_sent = 0
+            while True:
+                ok, frame = cap.read()
+                if not ok or frame is None:
+                    print("La camara dejo de enviar imagenes; reconectando...")
+                    break
+                if time.monotonic() - last_sent < 0.8:
+                    continue
+                height, width = frame.shape[:2]
+                if width > 960:
+                    frame = cv2.resize(frame, (960, max(1, round(height * 960 / width))))
+                encoded_ok, encoded = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 65])
+                if not encoded_ok:
+                    continue
+                payload = encoded.tobytes()
+                if len(payload) > MAX_FRAME:
+                    print("Fotograma demasiado grande; omitido")
+                    continue
+                try:
+                    with request(endpoint, key, payload) as result:
+                        if result.status != 200:
+                            print("Error de envio HTTP", result.status)
+                    last_sent = time.monotonic()
+                    print("Fotograma IP enviado:", time.strftime("%H:%M:%S"), flush=True)
+                except urllib.error.HTTPError as error:
+                    print("Servidor rechazo fotograma:", error.code)
+                    if error.code in (401, 403, 404):
+                        return 1
+                except Exception as error:
+                    print("Error de red al enviar:", error)
+        except KeyboardInterrupt:
+            print("Puente detenido.")
+            return 0
+        finally:
+            cap.release()
+        time.sleep(5)
 
 if __name__ == "__main__":
     try:
