@@ -51,13 +51,24 @@ def main():
     print("Enviando imagenes por HTTPS. Para detener, cierra esta ventana o presiona Ctrl+C.")
     import cv2
     while True:
-        cap = cv2.VideoCapture()
-        cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 7000)
-        cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 7000)
-        cap.open(url, cv2.CAP_FFMPEG)
+        # Open/read timeouts must be passed at capture creation (open-only properties).
+        # Calling cap.set() before cap.open() silently fails on many OpenCV builds.
+        try:
+            cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG, [
+                cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 7000,
+                cv2.CAP_PROP_READ_TIMEOUT_MSEC, 7000,
+            ])
+        except (cv2.error, TypeError):
+            cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
         if not cap.isOpened():
             cap.release()
-            cap = cv2.VideoCapture(url, cv2.CAP_ANY)
+            try:
+                cap = cv2.VideoCapture(url, cv2.CAP_ANY, [
+                    cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 7000,
+                    cv2.CAP_PROP_READ_TIMEOUT_MSEC, 7000,
+                ])
+            except (cv2.error, TypeError):
+                cap = cv2.VideoCapture(url, cv2.CAP_ANY)
         if not cap.isOpened():
             print("SIN CONEXION IP: verifica que la URL abre video en este mismo PC,")
             print("que ambos equipos estan en la misma Wi-Fi y que IP Webcam sigue activa.")
