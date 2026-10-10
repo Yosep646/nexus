@@ -47,18 +47,25 @@ def main():
         return 1
     endpoint = SERVER + "/api/cameras/" + camera["id"] + "/frame"
     print("Fuente:", url)
+    print("Diagnostico: probando conexion con OpenCV / FFmpeg...")
     print("Enviando imagenes por HTTPS. Para detener, cierra esta ventana o presiona Ctrl+C.")
     import cv2
     while True:
-        cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+        cap = cv2.VideoCapture()
+        cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 7000)
+        cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 7000)
+        cap.open(url, cv2.CAP_FFMPEG)
         if not cap.isOpened():
             cap.release()
             cap = cv2.VideoCapture(url, cv2.CAP_ANY)
         if not cap.isOpened():
-            print("No se pudo conectar con la IP; reintentando en 5 s")
+            print("SIN CONEXION IP: verifica que la URL abre video en este mismo PC,")
+            print("que ambos equipos estan en la misma Wi-Fi y que IP Webcam sigue activa.")
+            print("Reintentando en 5 s...")
             time.sleep(5)
             continue
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        print("CAMARA IP CONECTADA por OpenCV. Iniciando envio a NEXUS...", flush=True)
         try:
             last_sent = 0
             while True:
@@ -86,10 +93,15 @@ def main():
                     print("Fotograma IP enviado:", time.strftime("%H:%M:%S"), flush=True)
                 except urllib.error.HTTPError as error:
                     print("Servidor rechazo fotograma:", error.code)
+                    if error.code in (401, 403):
+                        print("API Key invalida o sin permisos. Verifica NEXUS_API_KEY en Railway.")
+                    elif error.code == 404:
+                        print("Camara no registrada. Actualiza la lista desde NEXUS.")
                     if error.code in (401, 403, 404):
                         return 1
                 except Exception as error:
                     print("Error de red al enviar:", error)
+                    print("La camara esta conectada localmente, pero no se pudo enviar a Railway.")
         except KeyboardInterrupt:
             print("Puente detenido.")
             return 0
