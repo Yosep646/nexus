@@ -1,0 +1,32 @@
+/* Operational control room: sober monitoring UI, not a marketing/demo page. */
+:root{font-family:Inter,"Segoe UI",system-ui,sans-serif;--ops-bg:#080e16;--ops-panel:#101923;--ops-edge:#273747;--ops-text:#e5edf4;--ops-muted:#9baebe;--ops-cyan:#57bed3}
+body{background:var(--ops-bg);color:var(--ops-text);font-variant-numeric:tabular-nums}
+.shell{grid-template-columns:226px minmax(0,1fr)}
+.rail{background:#0b121c;border-right:1px solid #263441;box-shadow:none}
+.brand{font-size:16px;letter-spacing:.035em}.brand b{color:#cfe6f0}.symbol{color:#65b4ca}
+.rail nav a{font-size:12px;border-radius:4px}.rail nav a:hover{transform:none;background:#192b39}
+main{max-width:none;padding:24px clamp(16px,2vw,32px)}
+.top h1{font-size:clamp(24px,2.2vw,32px);font-weight:700;letter-spacing:-.025em}.top h1 em{color:#d7e8f1}
+.eyebrow{color:#8eb2c6;letter-spacing:.11em}.sub,.help{color:var(--ops-muted)}
+.tile,.panel{background:var(--ops-panel);border:1px solid var(--ops-edge);border-radius:6px;box-shadow:none}
+.tile{min-height:105px;padding:14px 17px;transition:none}.tile:hover{transform:none;border-color:var(--ops-edge)}
+.tile strong{font-size:30px;margin:5px 0}.tile span{font-size:10px}
+.panel{padding:16px;margin-bottom:12px}.panel h2{font-size:16px;font-weight:700}
+.workspace{grid-template-columns:minmax(0,1.8fr) minmax(340px,1fr);gap:12px}
+.camera-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:8px}
+.camera{background:#080d14;border:1px solid #2b3946;border-radius:4px;box-shadow:none;transition:none}
+.camera:hover{border-color:#4a697d}.camera .feed{min-height:190px;max-height:none;aspect-ratio:16/9;background:#03070b}
+.camera .feed img,.camera .feed video{width:100%;height:100%;object-fit:contain}
+.feed-icon{display:none}.feed-label{top:10px;left:10px;bottom:auto;right:auto;background:#0a121dd9;border:1px solid #35485a;padding:5px 8px;color:#e5f2fa;font-size:10px;letter-spacing:.04em;border-radius:3px}
+.camera-info{padding:12px}.camera-info h3{font-size:13px}.camera-actions{gap:5px;margin:10px 0}
+.camera-actions button{min-width:0;flex:1 1 auto;font-size:10px;border-radius:3px}
+button,.outline{border-radius:4px;box-shadow:none!important;transform:none!important}
+button{background:#297a94;border-color:#3b91a7;color:#f5fbff}
+.outline{background:#182735;border-color:#354b5d;color:#d7e8f3}
+.notice,.status-ribbon,.alert-strip{border-radius:4px;box-shadow:none}
+.alert-strip{background:#14212c;border-color:#31465a}
+.map-panel #map{border-radius:3px;height:clamp(380px,47vh,620px);min-height:380px}
+.camera-toolbar{letter-spacing:.04em}
+table th{font-size:10px}table td{font-size:11px}
+@media(max-width:1250px){.workspace{grid-template-columns:1fr}}
+@media(max-width:750px){.shell{display:block}.camera-grid{grid-template-columns:1fr}.map-panel #map{height:360px;min-height:360px}}

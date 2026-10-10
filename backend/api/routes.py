@@ -56,7 +56,7 @@ async def camera_stream(camera_id: str):
             while True:
                 jpg = manager.latest(camera_id)
                 if jpg:
-                    yield b'--frame\\r\\nContent-Type: image/jpeg\\r\\n\\r\\n' + jpg + b'\\r\\n'
+                    yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpg + b'\r\n'
                 await asyncio.sleep(0.15)
         return StreamingResponse(frames(), media_type='multipart/x-mixed-replace; boundary=frame', headers={'Cache-Control':'no-store'})
     return await mjpeg(camera_id)

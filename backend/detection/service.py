@@ -23,7 +23,19 @@ async def classify_camera(camera_id: str):
         raise HTTPException(status_code=404, detail="Camera not found")
     if not detector.ready:
         return {"camera_id": camera_id, "status": "model_unavailable", "predictions": []}
-    # Local LAN mode uses the frame already captured by the per-camera OpenCV worker.\n    from backend.cameras.lan_manager import enabled, manager\n    if enabled():\n        jpeg = manager.latest(camera_id)\n        if jpeg is None:\n            raise HTTPException(status_code=503, detail="No recent frame from LAN camera")\n        import numpy as np\n        frame = await asyncio.to_thread(cv2.imdecode, np.frombuffer(jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)\n        if frame is None:\n            raise HTTPException(status_code=503, detail="LAN camera frame invalid")\n        result = await asyncio.to_thread(detector.predict, frame)\n        return {"camera_id": camera_id, **result, "_frame": frame if result.get("status") == "ok" else None}\n    # Railway cannot connect to private LAN addresses; prefer recent uploaded frames.
+    # Reuse the current frame from the independent OpenCV LAN worker.
+    from backend.cameras.lan_manager import enabled, manager
+    if enabled():
+        jpeg = manager.latest(camera_id)
+        if jpeg is None:
+            raise HTTPException(status_code=503, detail="No recent frame from LAN camera")
+        import numpy as np
+        frame = await asyncio.to_thread(cv2.imdecode, np.frombuffer(jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
+        if frame is None:
+            raise HTTPException(status_code=503, detail="LAN camera frame invalid")
+        result = await asyncio.to_thread(detector.predict, frame)
+        return {"camera_id": camera_id, **result, "_frame": frame if result.get("status") == "ok" else None}
+    # Railway cannot connect to private LAN addresses; prefer recent uploaded frames.
     directory = Path(os.getenv("NEXUS_CAMERA_FRAMES_DIR", "/app/data/camera_frames" if Path("/app/data").is_dir() else "data/camera_frames"))
     path = directory / (camera_id + ".jpg")
     if path.is_file() and time.time() - path.stat().st_mtime <= 15:
