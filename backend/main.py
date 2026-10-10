@@ -14,12 +14,16 @@ from backend.security import require_api_key
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    from backend.cameras.lan_manager import startup as start_lan_cameras
+    start_lan_cameras()
     task = None
     if os.getenv("NEXUS_MONITOR_ENABLED", "false").lower() == "true":
         task = asyncio.create_task(monitor_loop())
     try:
         yield
     finally:
+        from backend.cameras.lan_manager import manager
+        manager.shutdown()
         if task is not None:
             task.cancel()
             try:
