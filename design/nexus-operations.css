@@ -1,0 +1,53 @@
+/* NEXUS RISK AI — Operations design system. Opt-in: import this file from the dashboard entrypoint. */
+:root {
+  color-scheme: dark;
+  --nexus-bg: #070d19;
+  --nexus-surface: #101b2d;
+  --nexus-surface-raised: #17263b;
+  --nexus-border: #293b53;
+  --nexus-text: #eff6ff;
+  --nexus-muted: #a2b3ca;
+  --nexus-accent: #48c7f4;
+  --nexus-success: #4ce0b3;
+  --nexus-warning: #ffc46b;
+  --nexus-danger: #ff6b7d;
+  --nexus-radius: 16px;
+  --nexus-shadow: 0 16px 42px rgba(0,0,0,.24);
+  --nexus-font: Inter, "Segoe UI", system-ui, sans-serif;
+}
+.nexus-ui {font-family:var(--nexus-font);background:var(--nexus-bg);color:var(--nexus-text);min-height:100vh;line-height:1.5}
+.nexus-ui * {box-sizing:border-box}
+.nexus-ui :focus-visible {outline:2px solid var(--nexus-accent);outline-offset:3px}
+.nexus-ui .nx-layout {display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
+.nexus-ui .nx-sidebar {padding:24px 16px;border-right:1px solid var(--nexus-border);background:#0b1423}
+.nexus-ui .nx-main {padding:clamp(16px,2.5vw,36px);min-width:0}
+.nexus-ui .nx-header {display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.nexus-ui .nx-title {font-size:clamp(1.4rem,2.2vw,2rem);font-weight:750;letter-spacing:-.035em;margin:0}
+.nexus-ui .nx-subtitle {color:var(--nexus-muted);font-size:.9rem}
+.nexus-ui .nx-panel {background:var(--nexus-surface);border:1px solid var(--nexus-border);border-radius:var(--nexus-radius);box-shadow:var(--nexus-shadow);min-width:0}
+.nexus-ui .nx-panel-header {padding:16px 18px;border-bottom:1px solid var(--nexus-border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.nexus-ui .nx-panel-body {padding:18px}
+.nexus-ui .nx-stats {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.nexus-ui .nx-stat {padding:18px;min-width:0}
+.nexus-ui .nx-stat-label {color:var(--nexus-muted);font-size:.78rem;letter-spacing:.04em;text-transform:uppercase}
+.nexus-ui .nx-stat-value {font-size:clamp(1.4rem,2vw,2rem);font-weight:750;font-variant-numeric:tabular-nums}
+.nexus-ui .nx-workspace {display:grid;grid-template-columns:minmax(0,1.7fr) minmax(290px,1fr);gap:18px;align-items:start}
+.nexus-ui .nx-camera-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr));gap:12px}
+.nexus-ui .nx-camera {overflow:hidden;background:#0a1321;border:1px solid var(--nexus-border);border-radius:12px}
+.nexus-ui .nx-camera-media {aspect-ratio:16/9;position:relative;background:#030913;overflow:hidden}
+.nexus-ui .nx-camera-media video,.nexus-ui .nx-camera-media img {width:100%;height:100%;object-fit:contain;display:block}
+.nexus-ui .nx-camera-meta {padding:12px 14px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.nexus-ui .nx-camera-name {font-size:.9rem;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nexus-ui .nx-chip {font-size:.72rem;font-weight:700;letter-spacing:.03em;padding:4px 9px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.nexus-ui .nx-chip[data-status="online"] {color:var(--nexus-success)}
+.nexus-ui .nx-chip[data-status="warning"] {color:var(--nexus-warning)}
+.nexus-ui .nx-chip[data-status="offline"],.nexus-ui .nx-chip[data-status="critical"] {color:var(--nexus-danger)}
+.nexus-ui .nx-map {height:clamp(320px,45vh,650px);position:relative;overflow:hidden}
+.nexus-ui .nx-map canvas {display:block;width:100%;height:100%}
+.nexus-ui .nx-button {appearance:none;background:var(--nexus-accent);color:#051522;border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:700;cursor:pointer}
+.nexus-ui .nx-button:hover {filter:brightness(1.09)}
+.nexus-ui .nx-button:disabled {opacity:.55;cursor:not-allowed}
+.nexus-ui .nx-empty {padding:30px;text-align:center;color:var(--nexus-muted)}
+@media(max-width:1100px){.nexus-ui .nx-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.nexus-ui .nx-workspace{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:720px){.nexus-ui .nx-layout{grid-template-columns:minmax(0,1fr)}.nexus-ui .nx-sidebar{border-right:0;border-bottom:1px solid var(--nexus-border)}.nexus-ui .nx-stats{gap:10px}.nexus-ui .nx-main{padding:14px}.nexus-ui .nx-panel-body{padding:12px}}
+@media(prefers-reduced-motion:reduce){.nexus-ui *{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
