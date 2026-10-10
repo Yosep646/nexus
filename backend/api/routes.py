@@ -92,7 +92,7 @@ async def receive_camera_frame(camera_id: str, request: Request):
     if len(frame) > 2_000_000 or len(frame) < 100:
         raise HTTPException(status_code=413, detail="Invalid frame size")
     try:
-        if not frame[:2] != bytes((255,216)) or frame[-2:] != bytes((255,217)):
+        if frame[:2] != bytes((255,216)) or frame[-2:] != bytes((255,217)):
             raise ValueError("Invalid JPEG markers")
         image = cv2.imdecode(np.frombuffer(frame, dtype=np.uint8), cv2.IMREAD_COLOR)
         if image is None or image.shape[0] > 4096 or image.shape[1] > 4096:
