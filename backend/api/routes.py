@@ -23,18 +23,42 @@ def create_camera(payload: CameraCreate):
     try:
         if (payload.latitude is None) != (payload.longitude is None):
             raise ValueError("Latitude and longitude must be provided together")
-        return storage.add_camera(payload.name, payload.url, payload.latitude, payload.longitude)
+        from backend.cameras.lan_manager import enabled, probe, manager
+        if enabled():
+            from starlette.concurrency import run_in_threadpool
+            ok, reason = probe(payload.url)
+            if not ok:
+                raise HTTPException(status_code=503, detail=reason)
+        camera = storage.add_camera(payload.name, payload.url, payload.latitude, payload.longitude)
+        if enabled():
+            manager.start(camera)
+        return camera
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 @router.delete("/cameras/{camera_id}")
 def delete_camera(camera_id: str):
+    from backend.cameras.lan_manager import manager
+    manager.remove(camera_id)
     if not storage.remove_camera(camera_id):
         raise HTTPException(status_code=404, detail="Camera not found")
     return {"deleted": camera_id}
 
 @router.get("/cameras/{camera_id}/stream")
 async def camera_stream(camera_id: str):
+    from backend.cameras.lan_manager import enabled, manager
+    from fastapi.responses import StreamingResponse
+    import asyncio
+    if enabled():
+        if storage.get_camera(camera_id) is None:
+            raise HTTPException(status_code=404, detail='Camera not found')
+        async def frames():
+            while True:
+                jpg = manager.latest(camera_id)
+                if jpg:
+                    yield b'--frame\\r\\nContent-Type: image/jpeg\\r\\n\\r\\n' + jpg + b'\\r\\n'
+                await asyncio.sleep(0.15)
+        return StreamingResponse(frames(), media_type='multipart/x-mixed-replace; boundary=frame', headers={'Cache-Control':'no-store'})
     return await mjpeg(camera_id)
 
 
@@ -47,6 +71,12 @@ async def camera_snapshot(camera_id: str):
     camera = get_camera(camera_id)
     if camera is None:
         raise HTTPException(status_code=404, detail="Camera not found")
+    from backend.cameras.lan_manager import enabled, manager
+    if enabled():
+        jpeg = manager.latest(camera_id)
+        if jpeg is None:
+            raise HTTPException(status_code=503, detail="No recent LAN camera frame")
+        return Response(content=jpeg, media_type="image/jpeg", headers={"Cache-Control":"no-store"})
     try:
         _validate_url(camera["url"])
     except ValueError as exc:
@@ -115,6 +145,12 @@ def latest_camera_frame(camera_id: str):
     from backend.database.storage import get_camera
     if get_camera(camera_id) is None:
         raise HTTPException(status_code=404, detail="Camera not found")
+    from backend.cameras.lan_manager import enabled, manager
+    if enabled():
+        jpg = manager.latest(camera_id)
+        if jpg is None:
+            raise HTTPException(status_code=503, detail="LAN camera offline or waiting for frames")
+        return Response(content=jpg, media_type="image/jpeg", headers={"Cache-Control":"private, no-store"})
     directory = Path(os.getenv("NEXUS_CAMERA_FRAMES_DIR", "/app/data/camera_frames" if Path("/app/data").is_dir() else "data/camera_frames"))
     target = directory / (camera_id + ".jpg")
     if not target.is_file():
@@ -263,3 +299,10 @@ def detection_report(limit: int = Query(200, ge=1, le=500)):
 def notifications(limit: int = Query(100, ge=1, le=500)):
     """Confirmed alerts awaiting delivery; no external dispatch is implied."""
     return storage.list_notifications(limit)
+
+@router.get("/cameras/{camera_id}/status")
+def camera_status(camera_id: str):
+    from backend.cameras.lan_manager import manager, enabled
+    if storage.get_camera(camera_id) is None:
+        raise HTTPException(status_code=404, detail="Camera not found")
+    return {"camera_id": camera_id, "mode": "lan" if enabled() else "bridge", **manager.status(camera_id)}
