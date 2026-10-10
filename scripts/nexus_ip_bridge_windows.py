@@ -58,13 +58,13 @@ def main():
                     if not chunk:
                         raise ConnectionError("La camara cerro la conexion")
                     buffer.extend(chunk)
-                    start = buffer.find(b"\\xff\\xd8")
+                    start = buffer.find(bytes((255,216)))
                     if start < 0:
                         buffer.clear()
                         continue
                     if start:
                         del buffer[:start]
-                    end = buffer.find(b"\\xff\\xd9", 2)
+                    end = buffer.find(bytes((255,217)), 2)
                     if end < 0:
                         if len(buffer) > MAX_FRAME:
                             buffer.clear()
