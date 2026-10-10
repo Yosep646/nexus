@@ -98,3 +98,14 @@ python scripts/camera_bridge.py --camera-url "http://192.168.0.16:8080/video" --
 5. Mantén el PC encendido y el agente ejecutándose. Repite el agente por cámara con su ID correspondiente. El servidor rechaza JPEGs corruptos o mayores de 2 MB y no publica las imágenes sin la API Key.
 
 La ruta `POST /api/cameras/{id}/frame` recibe JPEGs, `GET /api/cameras/{id}/frame` muestra solo imágenes recientes (menos de 15 s). Este puente es de **captura visual**: la inferencia del modelo entrenado y el procesamiento continuo de eventos siguen pendientes. Para producción conviene una credencial exclusiva de ingestión por cámara y límites de tasa.
+
+### Instalación automática del puente en Windows
+
+Con el repositorio abierto en VS Code, ejecuta en PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install_camera_bridge.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\start_camera_bridge.ps1
+```
+
+El instalador crea `.venv-bridge` e instala OpenCV de forma aislada. El iniciador solicita la API Key sin guardarla en archivos, consulta cámaras registradas y permite seleccionar el ID sin copiarlo manualmente. Python 3.10+ debe estar previamente instalado; si falta, el script explica cómo instalarlo. El PC y el teléfono deben compartir Wi-Fi, y el PC debe permanecer encendido mientras se envían imágenes.
