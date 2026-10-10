@@ -21,7 +21,27 @@ function locateMe(){if(!map){message('Mapa no disponible.');return;}if(locationW
 $('locate-me').addEventListener('click',locateMe);
 $('map-reset').addEventListener('click',()=>{stopLocationTracking();if(!map)return;map.invalidateSize({pan:false});map.setView([-9.93,-76.24],7);renderMap();message('Vista regional restaurada.');});
 
-async function loadSnapshot(camera, card){const state=card.querySelector('.camera-state');const view=card.querySelector('.feed');state.textContent='Solicitando imagen al servidor…';try{const response=await api('/cameras/'+encodeURIComponent(camera.id)+'/snapshot');const blob=await response.blob();if(!blob.type.startsWith('image/'))throw Error('Respuesta no es imagen');const old=view.querySelector('img');if(old){URL.revokeObjectURL(old.src);old.remove()}const img=document.createElement('img');img.className='camera-frame';img.alt='Captura actual de '+camera.name;img.src=URL.createObjectURL(blob);view.append(img);state.textContent='Cámara accesible: imagen recibida del servidor. Pulsa Ver cámara IP para actualizar.';}catch(e){state.textContent='Servidor sin acceso a la cámara: '+e.message+'. Puedes probar la vista directa si estás en la misma Wi-Fi; en HTTPS el navegador puede bloquear HTTP.';}}
+async function loadSnapshot(camera, card){
+  const state=card.querySelector('.camera-state');
+  state.textContent='Consultando el último fotograma recibido desde la cámara IP…';
+  try{
+    const response=await api('/cameras/'+encodeURIComponent(camera.id)+'/frame');
+    const blob=await response.blob();
+    if(!blob.type.startsWith('image/'))throw Error('El servidor no devolvió una imagen');
+    const view=card.querySelector('.feed');
+    const old=view.querySelector('img');
+    const img=document.createElement('img');
+    img.className='camera-frame';
+    img.alt='Fotograma reciente de '+camera.name;
+    const objectUrl=URL.createObjectURL(blob);
+    img.onload=()=>{if(old){if(old.src.startsWith('blob:'))URL.revokeObjectURL(old.src);old.remove()}};
+    img.src=objectUrl;
+    view.append(img);
+    state.textContent='Fotograma IP recibido desde Railway · '+new Date().toLocaleTimeString('es-PE')+'.';
+  }catch(error){
+    state.textContent='Cámara IP sin transmisión reciente. Abre NEXUS-Camara-IP.exe en una PC conectada a la misma Wi-Fi y selecciona esta cámara. El servidor no puede acceder directamente a direcciones 192.168.x.x.';
+  }
+}
 function openLocalCamera(camera, card){
   const state=card.querySelector('.camera-state'), view=card.querySelector('.feed');
   let url;
@@ -120,9 +140,9 @@ async function refreshPushedFrames(){
       image.src=URL.createObjectURL(blob);
       image.onload=()=>{if(old){if(old.src.startsWith('blob:'))URL.revokeObjectURL(old.src);old.remove()}};
       view.append(image);
-      card.querySelector('.camera-state').textContent='Agente local conectado · imagen actualizada ('+new Date().toLocaleTimeString('es-PE')+'). Actualización de fotogramas, no video continuo.';
+      card.querySelector('.camera-state').textContent='Puente IP conectado · imagen actualizada ('+new Date().toLocaleTimeString('es-PE')+'). Actualización de fotogramas, no video continuo.';
     }catch(e){
-      if(!card.querySelector('.feed img'))card.querySelector('.camera-state').textContent='Cámara registrada. Sin imágenes del agente local; ejecuta scripts/start_camera_bridge.ps1 en tu PC.';
+      if(!card.querySelector('.feed img'))card.querySelector('.camera-state').textContent='Cámara IP esperando fotogramas. Ejecuta NEXUS-Camara-IP.exe en una PC de la misma Wi-Fi.';
     }
   }
 }
@@ -132,7 +152,7 @@ function renderAdvisories(items){advisoryCache=items;const filter=$('alert-filte
 function renderChart(stats){const chart=$('chart');chart.replaceChildren();const items=Object.entries(stats.by_label||{}).sort((a,b)=>b[1]-a[1]);if(!items.length){chart.innerHTML='<p class="help">Todavía no hay detecciones registradas.</p>';return;}const max=Math.max(1,...items.map(x=>x[1]));for(const [label,n] of items){const row=document.createElement('div');row.className='bar-row';const name=document.createElement('span');name.textContent=label;const track=document.createElement('div');track.className='track';const bar=document.createElement('i');bar.style.width=(n/max*100)+'%';track.append(bar);const count=document.createElement('strong');count.textContent=n;row.append(name,track,count);chart.append(row)}}
 async function loadData(){if(!apiKey)return;try{const [cams,events,stats,model,advisories]=await Promise.all([api('/cameras'),api('/detections?limit=100'),api('/stats'),api('/model/status'),api('/risk-advisories')]);cameras=Array.isArray(cams)?cams:[];detections=Array.isArray(events)?events:[];modelReady=Boolean(model.ready);$('count-cameras').textContent=cameras.length;$('count-detections').textContent=stats.detections_total??detections.length;$('count-pending').textContent=stats.pending_review??0;$('model-ready').textContent=modelReady?'LISTO':'NO DISPONIBLE';$('model-ready').className='model-state '+(modelReady?'ready':'offline');$('model-detail').textContent=modelReady?'Modelo cargado; resultados sujetos a revisión':'Modelo no instalado. Consulta README.md para habilitar la detección.';renderCameras();refreshPushedFrames();renderEvents();renderAdvisories(advisories);renderChart(stats);renderMap();$('last-update').textContent='Sincronizado '+new Date().toLocaleTimeString('es-PE');setConnection('API conectada',true);setCameraAuth(true);message(modelReady?'API conectada · Modelo de IA operativo.':'API conectada correctamente · Dashboard disponible.');}catch(e){setConnection('Acceso no disponible');setCameraAuth(false);message('No se pudieron cargar datos operativos: '+e.message+'. Verifica la API Key en Sesión operativa.');}}
 $('connect').onclick=()=>{apiKey=$('api-key').value.trim();$('api-key').value='';if(!apiKey){setCameraAuth(false);message('Introduce una clave de API válida.');return;}$('auth-note').textContent='Clave mantenida en memoria durante esta pestaña; no se guarda en el navegador.';loadData()};
-$('camera-form').onsubmit=async e=>{e.preventDefault();if(!apiKey){message('Primero introduce la clave NEXUS_API_KEY en Sesión operativa y pulsa Conectar.');document.getElementById('api-key').focus();return;}const name=$('camera-name').value.trim(),url=$('camera-url').value.trim();const latText=$('camera-latitude').value.trim(),lonText=$('camera-longitude').value.trim();if(Boolean(latText)!==Boolean(lonText)){message('Introduce ambas coordenadas o deja ambas vacías.');return;}const latitude=latText?Number(latText):null,longitude=lonText?Number(lonText):null;if(/^https?:\/\/192\.168\.|^https?:\/\/10\.|^https?:\/\/172\.(1[6-9]|2[0-9]|3[01])\./.test(url)){message('Atención: la IP privada '+url+' no es accesible desde Railway. Para ver tu teléfono usa un servidor local en la misma Wi-Fi o una conexión VPN segura. El registro no confirma transmisión.');}try{const created=await api('/cameras',{method:'POST',body:JSON.stringify({name,url,latitude,longitude})});e.target.reset();await loadData();message('Cámara «'+name+'» registrada correctamente (ID: '+created.id+'). Para visualizar imágenes en Railway, inicia el agente local en tu computadora.');document.getElementById('cameras').scrollIntoView({behavior:'smooth',block:'start'});}catch(err){message('No se pudo registrar cámara: '+err.message);$('camera-name').focus()}};
+$('camera-form').onsubmit=async e=>{e.preventDefault();if(!apiKey){message('Primero introduce la clave NEXUS_API_KEY en Sesión operativa y pulsa Conectar.');document.getElementById('api-key').focus();return;}const name=$('camera-name').value.trim(),url=$('camera-url').value.trim();const latText=$('camera-latitude').value.trim(),lonText=$('camera-longitude').value.trim();if(Boolean(latText)!==Boolean(lonText)){message('Introduce ambas coordenadas o deja ambas vacías.');return;}const latitude=latText?Number(latText):null,longitude=lonText?Number(lonText):null;if(/^https?:\/\/192\.168\.|^https?:\/\/10\.|^https?:\/\/172\.(1[6-9]|2[0-9]|3[01])\./.test(url)){message('Atención: la IP privada '+url+' no es accesible desde Railway. Para ver tu teléfono usa un servidor local en la misma Wi-Fi o una conexión VPN segura. El registro no confirma transmisión.');}try{const created=await api('/cameras',{method:'POST',body:JSON.stringify({name,url,latitude,longitude})});e.target.reset();await loadData();message('Cámara «'+name+'» registrada correctamente (ID: '+created.id+'). Para transmitir por IP sin VS Code, inicia NEXUS-Camara-IP.exe en una PC de la misma Wi-Fi.');document.getElementById('cameras').scrollIntoView({behavior:'smooth',block:'start'});}catch(err){message('No se pudo registrar cámara: '+err.message);$('camera-name').focus()}};
 $('refresh').onclick=loadData;
 $('alert-filter').onchange=()=>renderAdvisories(advisoryCache);
 $('enable-notifications').onclick=async()=>{if(!('Notification' in window)){message('Este navegador no admite notificaciones.');return;}if(!window.isSecureContext){message('Las notificaciones requieren HTTPS.');return;}const permission=await Notification.requestPermission();message(permission==='granted'?'Avisos activados para nuevas señales pendientes mientras la página esté abierta.':'El navegador no concedió permiso de notificaciones.');};
