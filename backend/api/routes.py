@@ -78,8 +78,8 @@ async def camera_snapshot(camera_id: str):
 async def receive_camera_frame(camera_id: str, request: Request):
     from pathlib import Path
     import os
-    from PIL import Image
-    from io import BytesIO
+    import cv2
+    import numpy as np
     from datetime import datetime, timezone
     from backend.database.storage import get_camera
     if get_camera(camera_id) is None:
@@ -92,10 +92,11 @@ async def receive_camera_frame(camera_id: str, request: Request):
     if len(frame) > 2_000_000 or len(frame) < 100:
         raise HTTPException(status_code=413, detail="Invalid frame size")
     try:
-        with Image.open(BytesIO(frame)) as image:
-            if image.format != "JPEG" or image.width > 4096 or image.height > 4096:
-                raise ValueError("Unsupported image")
-            image.verify()
+        if not frame.startswith(b"\\xff\\xd8") or not frame.endswith(b"\\xff\\xd9"):
+            raise ValueError("Invalid JPEG markers")
+        image = cv2.imdecode(np.frombuffer(frame, dtype=np.uint8), cv2.IMREAD_COLOR)
+        if image is None or image.shape[0] > 4096 or image.shape[1] > 4096:
+            raise ValueError("Unsupported image")
     except (OSError, ValueError) as exc:
         raise HTTPException(status_code=422, detail="Invalid JPEG frame") from exc
     directory = Path(os.getenv("NEXUS_CAMERA_FRAMES_DIR", "/app/data/camera_frames" if Path("/app/data").is_dir() else "data/camera_frames"))
