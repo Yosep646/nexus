@@ -119,3 +119,11 @@ El instalador crea `.venv-bridge` e instala OpenCV de forma aislada. El iniciado
 5. Pulsa **Detener transmisión** para liberar la cámara. Si cierras la pestaña o el dispositivo entra en suspensión, el envío se detiene.
 
 **Limitaciones:** getUserMedia solo accede a cámaras disponibles para el navegador (webcam integrada, USB, o cámara virtual previamente instalada). No abre automáticamente un stream HTTP MJPEG privado `192.168.x.x` desde un sitio HTTPS; para esa cámara se necesita el puente LAN seguro. Los fotogramas enviados no son video continuo ni activan el modelo de IA. Evita transmitir personas sin su consentimiento. No compartas la API Key.
+
+### Conectar cámara IP desde Windows sin VS Code ni instalar Python
+
+La compilación de GitHub Actions genera un ejecutable `NEXUS-Camara-IP.exe` con PyInstaller. Descárgalo en la pestaña **Actions → Build Windows IP Camera Bridge → ejecución correcta → Artifacts → NEXUS-Camara-IP-Windows**. Extrae el ZIP y ejecuta el .exe en Windows; no necesita VS Code, Git, Docker ni Python instalados. Windows puede pedir confirmación de seguridad porque el ejecutable no está firmado digitalmente: comprueba el origen del repositorio antes de ejecutarlo.
+
+**Requisitos:** computadora Windows y cámara IP conectadas a la misma Wi-Fi; fuente HTTP MJPEG accesible desde esa PC (por ejemplo `http://192.168.0.16:8080/video`); cámara ya registrada en NEXUS; API Key de Railway. El programa solicita la clave sin almacenarla, muestra las cámaras registradas y permite seleccionar la IP que transmitirá. Envía fotogramas JPEG por HTTPS al servidor, reintenta si la cámara se desconecta y se detiene al cerrar la consola. Mantén la PC y el programa encendidos. No convierte la IP local en dirección pública ni transmite audio.
+
+**IA:** el botón Analizar IA usa el último fotograma recibido cuando hay uno reciente, pero requiere un modelo entrenado, compatible y desplegado en Railway. No confundir conectividad de la cámara con detección automática.
