@@ -12,7 +12,7 @@ def main():
     parser.add_argument("--epochs", type=int, default=20)
     args = parser.parse_args()
     import tensorflow as tf
-    from scripts.audit_training_dataset import audit
+    from audit_training_dataset import audit
     for split in ("train", "val", "test"):
         report = audit(args.data / split)
         if not report["ready_for_training"]:
