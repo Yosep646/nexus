@@ -109,3 +109,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start_camera_bridge.ps1
 ```
 
 El instalador crea `.venv-bridge` e instala OpenCV de forma aislada. El iniciador solicita la API Key sin guardarla en archivos, consulta cámaras registradas y permite seleccionar el ID sin copiarlo manualmente. Python 3.10+ debe estar previamente instalado; si falta, el script explica cómo instalarlo. El PC y el teléfono deben compartir Wi-Fi, y el PC debe permanecer encendido mientras se envían imágenes.
+
+### Transmisión desde Chrome sin instalar aplicaciones
+
+1. Abre NEXUS mediante HTTPS, introduce la API Key y pulsa **Conectar**.
+2. Registra una cámara en el dashboard (la dirección IP se conserva como referencia de fuente).
+3. En la tarjeta correspondiente pulsa **Iniciar transmisión** y acepta el permiso de cámara del navegador.
+4. La imagen aparece en vivo en tu navegador y se envían fotogramas JPEG autenticados al servidor aproximadamente cada 1.5 segundos. Otros navegadores autenticados pueden consultar los fotogramas recientes.
+5. Pulsa **Detener transmisión** para liberar la cámara. Si cierras la pestaña o el dispositivo entra en suspensión, el envío se detiene.
+
+**Limitaciones:** getUserMedia solo accede a cámaras disponibles para el navegador (webcam integrada, USB, o cámara virtual previamente instalada). No abre automáticamente un stream HTTP MJPEG privado `192.168.x.x` desde un sitio HTTPS; para esa cámara se necesita el puente LAN seguro. Los fotogramas enviados no son video continuo ni activan el modelo de IA. Evita transmitir personas sin su consentimiento. No compartas la API Key.
