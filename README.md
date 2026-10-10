@@ -54,3 +54,32 @@ El volumen de Railway tiene un límite de 500 MB en el plan actual. Configura al
 ## Estado actual de la integración del modelo
 
 El formulario de importación manual del ZIP fue retirado del dashboard. El modelo TensorFlow.js original no está empaquetado en el contenedor de producción. Hasta integrar los pesos reales en el backend, el estado de inferencia se mantiene como **NO DISPONIBLE** y no se emiten detecciones ficticias. La configuración de acceso a la API sigue siendo obligatoria para operaciones protegidas.
+
+## Ampliación del entrenamiento con fotografías reales
+
+El ZIP original de Teachable Machine contiene la arquitectura y pesos, **no las fotografías de entrenamiento**. Por ello no se puede reentrenar responsablemente solo con ese ZIP. Se agregaron herramientas para auditar imágenes y entrenar una nueva versión sin sobrescribir el modelo existente.
+
+Estructura esperada:
+
+```text
+dataset/
+  train/
+    deslizamiento_de_tierra/  huayco/  inundacion/  normal/  sequia/
+  val/
+    deslizamiento_de_tierra/  huayco/  inundacion/  normal/  sequia/
+  test/
+    deslizamiento_de_tierra/  huayco/  inundacion/  normal/  sequia/
+```
+
+Coloca fotografías originales en cada carpeta; conserva **imágenes del mismo evento, lugar, vídeo o ráfaga en un solo subconjunto** para evitar fuga de información. No uses copias, fotogramas contiguos ni imágenes generadas artificialmente como pruebas independientes. Comprueba derechos de uso y elimina metadatos personales cuando corresponda.
+
+```bash
+pip install Pillow
+python scripts/audit_training_dataset.py --data dataset/train --output data/audit_train.json
+python scripts/audit_training_dataset.py --data dataset/val --output data/audit_val.json
+python scripts/audit_training_dataset.py --data dataset/test --output data/audit_test.json
+pip install -r requirements-ai.txt
+python scripts/train_disaster_classifier.py --data dataset --output data/trained_model
+```
+
+El entrenamiento utiliza MobileNetV2 preentrenado y aumentos **solo en entrenamiento**, guarda `model.keras` y evalúa el conjunto de prueba independiente. La evaluación debe complementarse con matriz de confusión, revisión de falsos positivos y validación de escenarios locales antes de generar alertas. La nueva versión no sustituye automáticamente al modelo original ni está activada en Railway hasta ser validada.
