@@ -2,6 +2,7 @@ const $ = id => document.getElementById(id);
 let apiKey = '', map, markers, cameras = [], detections = [], modelReady = false;
 let advisoryCache = [], previousAlertIds = new Set(), alertBootstrapped = false;
 let locationMarker = null, locationAccuracy = null, locationWatchId = null, followLocation = false;
+let browserBroadcast = null;
 
 const message = (s) => { $('message').textContent = s; };
 function setCameraAuth(connected){const status=$('camera-auth-status');if(status)status.textContent=connected?'Sesión conectada: ya puedes registrar cámaras.':'Sesión no conectada: introduce tu API Key arriba y pulsa Conectar antes de registrar cámaras.';const button=document.querySelector('#camera-form button[type="submit"]');if(button){button.disabled=!connected;button.title=connected?'Registrar cámara':'Conecta primero tu sesión operativa';}}
@@ -37,9 +38,75 @@ function openLocalCamera(camera, card){
   img.onerror=()=>{img.remove();state.textContent='No se pudo abrir la transmisión local. Comprueba que ambos dispositivos estén en la misma red, la URL MJPEG y los permisos del navegador.';};
   img.src=url.href;view.append(img);state.textContent='Intentando conexión directa desde este navegador…';
 }
+
+// Browser-native capture works without a desktop agent. Browser permission is mandatory.
+function stopBrowserBroadcast(){
+  const active=browserBroadcast;
+  if(!active)return;
+  browserBroadcast=null;
+  clearInterval(active.timer);
+  active.stream.getTracks().forEach(track=>track.stop());
+  const card=document.querySelector('#camera-grid .camera[data-camera-id="'+CSS.escape(active.cameraId)+'"]');
+  if(card){
+    const video=card.querySelector('video.browser-camera-video');
+    if(video)video.remove();
+    const button=card.querySelector('.browser-broadcast');
+    if(button){button.textContent='Iniciar transmisión';button.disabled=false;}
+    card.querySelector('.camera-state').textContent='Transmisión detenida. Cámara y micrófono liberados.';
+  }
+  message('Transmisión desde navegador detenida.');
+}
+async function startBrowserBroadcast(camera,card){
+  if(!apiKey){message('Conecta la sesión operativa primero.');return;}
+  if(browserBroadcast){if(browserBroadcast.cameraId===String(camera.id)){stopBrowserBroadcast();return;}message('Detén primero la transmisión de la otra cámara.');return;}
+  if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia){message('La transmisión requiere HTTPS y un navegador con permisos de cámara.');return;}
+  const button=card.querySelector('.browser-broadcast'),state=card.querySelector('.camera-state');
+  button.disabled=true;state.textContent='Solicitando permiso para usar una cámara de este dispositivo…';
+  let stream;
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}},audio:false});
+    const view=card.querySelector('.feed');
+    const video=document.createElement('video');video.className='browser-camera-video';video.autoplay=true;video.muted=true;video.playsInline=true;
+    video.style.cssText='width:100%;height:100%;object-fit:contain;background:#061524;';
+    video.srcObject=stream;view.replaceChildren(video);
+    await video.play();
+    const canvas=document.createElement('canvas');let busy=false,consecutiveErrors=0;
+    const active={cameraId:String(camera.id),stream,timer:null};
+    browserBroadcast=active;
+    const send=async()=>{
+      if(browserBroadcast!==active||busy||video.readyState<2)return;
+      busy=true;
+      try{
+        const width=Math.min(960,video.videoWidth||960),height=Math.round(width*(video.videoHeight||720)/(video.videoWidth||960));
+        canvas.width=width;canvas.height=height;
+        canvas.getContext('2d',{alpha:false}).drawImage(video,0,0,width,height);
+        const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.65));
+        if(!blob)throw Error('No se pudo capturar el fotograma');
+        const response=await api('/cameras/'+encodeURIComponent(camera.id)+'/frame',{method:'POST',body:blob,headers:{'Content-Type':'image/jpeg'}});
+        consecutiveErrors=0;
+        if(browserBroadcast===active)state.textContent='Transmitiendo desde navegador · último fotograma enviado '+new Date().toLocaleTimeString('es-PE')+'. Mantén esta pestaña abierta.';
+      }catch(error){
+        consecutiveErrors++;
+        if(browserBroadcast===active)state.textContent='Error al enviar imagen ('+consecutiveErrors+'): '+error.message;
+        if(consecutiveErrors>=5){stopBrowserBroadcast();message('Transmisión detenida por errores repetidos. Comprueba API Key y conexión.');}
+      }finally{busy=false;}
+    };
+    stream.getVideoTracks()[0]?.addEventListener('ended',()=>{if(browserBroadcast===active)stopBrowserBroadcast();});
+    button.textContent='Detener transmisión';button.disabled=false;
+    state.textContent='Cámara autorizada; enviando fotogramas por HTTPS…';
+    await send();
+    if(browserBroadcast===active)active.timer=setInterval(send,1500);
+  }catch(error){
+    if(stream)stream.getTracks().forEach(track=>track.stop());
+    button.disabled=false;
+    state.textContent='No se pudo iniciar: '+error.message+'. Revisa los permisos de cámara de Chrome.';
+  }
+}
+
 async function refreshPushedFrames(){
   if(!apiKey)return;
   for(const card of document.querySelectorAll('#camera-grid .camera')){
+    if(browserBroadcast?.cameraId===card.dataset.cameraId)continue;
     const id=card.dataset.cameraId;
     if(!id)continue;
     try{
@@ -59,7 +126,7 @@ async function refreshPushedFrames(){
     }
   }
 }
-function renderCameras(){const grid=$('camera-grid');grid.replaceChildren();$('camera-capacity').textContent=cameras.length+' cámaras registradas · admite 6 o más';if(!cameras.length){grid.innerHTML='<div class="empty">No hay cámaras IP registradas. Añade la primera para iniciar el monitoreo.</div>';return;}for(const camera of cameras){const card=document.createElement('article');card.className='camera';card.dataset.cameraId=String(camera.id);const latest=detections.find(d=>String(d.camera_id)===String(camera.id));const confidence=latest&&Number.isFinite(Number(latest.confidence))?(Number(latest.confidence)*100).toFixed(1)+'%':'—';card.innerHTML='<div class="feed"><span class="feed-icon">▣</span><span class="feed-label">FUENTE IP · VIDEO BAJO AUTORIZACIÓN</span></div><div class="camera-info"><h3>'+escape(camera.name)+'</h3><p>'+escape(latest?latest.label+' · confianza '+confidence:'Sin detecciones registradas')+'</p><div class="camera-actions"><button class="snapshot outline">Ver cámara IP</button><button class="local-preview outline">Vista local</button><button class="detect">Analizar IA</button><button class="remove outline">Eliminar</button></div><small class="camera-state">No se afirma transmisión hasta verificar el flujo.</small></div>';card.querySelector('.snapshot').onclick=()=>loadSnapshot(camera,card);card.querySelector('.local-preview').onclick=()=>openLocalCamera(camera,card);card.querySelector('.detect').onclick=async()=>{const state=card.querySelector('.camera-state');state.textContent='Analizando…';try{const result=await api('/cameras/'+encodeURIComponent(camera.id)+'/detect',{method:'POST'});state.textContent=result.status==='ok'?'Análisis completado.':'Sin inferencia: '+(result.status||'modelo no disponible');await loadData();}catch(e){state.textContent='Error: '+e.message}};card.querySelector('.remove').onclick=async()=>{if(!confirm('¿Eliminar esta cámara?'))return;try{await api('/cameras/'+encodeURIComponent(camera.id),{method:'DELETE'});await loadData()}catch(e){message('No se pudo eliminar: '+e.message)}};grid.append(card);}}
+function renderCameras(){if(browserBroadcast)return;const grid=$('camera-grid');grid.replaceChildren();$('camera-capacity').textContent=cameras.length+' cámaras registradas · admite 6 o más';if(!cameras.length){grid.innerHTML='<div class="empty">No hay cámaras IP registradas. Añade la primera para iniciar el monitoreo.</div>';return;}for(const camera of cameras){const card=document.createElement('article');card.className='camera';card.dataset.cameraId=String(camera.id);const latest=detections.find(d=>String(d.camera_id)===String(camera.id));const confidence=latest&&Number.isFinite(Number(latest.confidence))?(Number(latest.confidence)*100).toFixed(1)+'%':'—';card.innerHTML='<div class="feed"><span class="feed-icon">▣</span><span class="feed-label">FUENTE IP · VIDEO BAJO AUTORIZACIÓN</span></div><div class="camera-info"><h3>'+escape(camera.name)+'</h3><p>'+escape(latest?latest.label+' · confianza '+confidence:'Sin detecciones registradas')+'</p><div class="camera-actions"><button class="snapshot outline">Ver cámara IP</button><button class="local-preview outline">Vista local</button><button class="browser-broadcast">Iniciar transmisión</button><button class="detect">Analizar IA</button><button class="remove outline">Eliminar</button></div><small class="camera-state">No se afirma transmisión hasta verificar el flujo.</small></div>';card.querySelector('.snapshot').onclick=()=>loadSnapshot(camera,card);card.querySelector('.local-preview').onclick=()=>openLocalCamera(camera,card);card.querySelector('.browser-broadcast').onclick=()=>startBrowserBroadcast(camera,card);card.querySelector('.detect').onclick=async()=>{const state=card.querySelector('.camera-state');state.textContent='Analizando…';try{const result=await api('/cameras/'+encodeURIComponent(camera.id)+'/detect',{method:'POST'});state.textContent=result.status==='ok'?'Análisis completado.':'Sin inferencia: '+(result.status||'modelo no disponible');await loadData();}catch(e){state.textContent='Error: '+e.message}};card.querySelector('.remove').onclick=async()=>{if(browserBroadcast?.cameraId===String(camera.id))stopBrowserBroadcast();if(!confirm('¿Eliminar esta cámara?'))return;try{await api('/cameras/'+encodeURIComponent(camera.id),{method:'DELETE'});await loadData()}catch(e){message('No se pudo eliminar: '+e.message)}};grid.append(card);}}
 function renderEvents(){const body=$('event-rows');body.replaceChildren();if(!detections.length){body.innerHTML='<tr><td colspan="5">Sin detecciones reales registradas</td></tr>';return;}for(const d of detections.slice(0,100)){const tr=document.createElement('tr');const cam=cameras.find(c=>String(c.id)===String(d.camera_id));const confidence=Number(d.confidence);const date=d.created_at||d.timestamp;const cols=[date?new Date(date).toLocaleString('es-PE'):'—',cam?.name||d.camera_id||'—',d.label||'—',Number.isFinite(confidence)?(confidence*100).toFixed(1)+'%':'—',d.review_status||'—'];for(const val of cols){const td=document.createElement('td');td.textContent=String(val);tr.append(td)}body.append(tr)}}
 function renderAdvisories(items){advisoryCache=items;const filter=$('alert-filter').value;const shown=filter==='all'?items:items.filter(x=>x.review_status===filter);$('alert-count').textContent=shown.length+' señales visibles · '+items.length+' registradas';const pending=items.filter(x=>x.review_status==='pending_human_review');const banner=$('alert-strip');banner.className='alert-strip '+(pending.length?'alert-active':items.length?'alert-observed':'');$('alert-headline').textContent=pending.length?'⚠ '+pending.length+' SEÑALES PENDIENTES DE REVISIÓN':items.length?'SEÑALES REGISTRADAS · REVISAR HISTORIAL':'CENTRO DE ALERTAS · SIN SEÑALES REGISTRADAS';$('alert-summary').textContent=pending.length?'Se requiere validación humana. No son pronósticos de desastres.':items.length?'Hay registros de fenómenos; consulta su estado antes de tomar decisiones.':'Sin señales registradas. Esto no garantiza ausencia de riesgos.';if(alertBootstrapped&&pending.length&&Notification.permission==='granted'){for(const item of pending){if(!previousAlertIds.has(item.detection_id)){new Notification('NEXUS · Señal para revisión',{body:item.phenomenon+': '+item.message,tag:item.detection_id});}}}previousAlertIds=new Set(pending.map(x=>x.detection_id));alertBootstrapped=true;const root=$('advisory-list');root.replaceChildren();if(!shown.length){const p=document.createElement('p');p.className='help';p.textContent='Sin señales de riesgo registradas. La ausencia de detecciones no garantiza ausencia de peligro.';root.append(p);return;}for(const item of shown.slice(0,12)){const el=document.createElement('article');el.className='advisory';const h=document.createElement('strong');h.textContent=item.phenomenon+' · '+(Number(item.confidence)*100).toFixed(1)+'% de confianza del clasificador';const p=document.createElement('p');p.textContent=item.message;const small=document.createElement('small');small.textContent='Cámara '+item.camera_id+' · '+(item.review_status||'sin revisar')+' · No es pronóstico meteorológico';el.append(h,p,small);if(item.review_status==='pending_human_review'){const actions=document.createElement('div');actions.className='review-actions';for(const [label,decision] of [['✓ Confirmar','confirmed'],['× Descartar','dismissed']]){const button=document.createElement('button');button.textContent=label;button.className=decision==='dismissed'?'outline':'';button.onclick=async()=>{if(!confirm('¿Registrar decisión humana: '+label+'?'))return;try{await api('/detections/'+encodeURIComponent(item.detection_id)+'/review',{method:'PATCH',body:JSON.stringify({decision,notes:'Revisión manual desde el centro de operaciones'})});await loadData()}catch(e){message('No se pudo revisar: '+e.message)}};actions.append(button)}el.append(actions)}root.append(el);}}
 function renderChart(stats){const chart=$('chart');chart.replaceChildren();const items=Object.entries(stats.by_label||{}).sort((a,b)=>b[1]-a[1]);if(!items.length){chart.innerHTML='<p class="help">Todavía no hay detecciones registradas.</p>';return;}const max=Math.max(1,...items.map(x=>x[1]));for(const [label,n] of items){const row=document.createElement('div');row.className='bar-row';const name=document.createElement('span');name.textContent=label;const track=document.createElement('div');track.className='track';const bar=document.createElement('i');bar.style.width=(n/max*100)+'%';track.append(bar);const count=document.createElement('strong');count.textContent=n;row.append(name,track,count);chart.append(row)}}
@@ -75,3 +142,4 @@ fetch('/health',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('HTTP '+r.stat
 setInterval(()=>{if(apiKey)loadData()},30000);
 
 setInterval(refreshPushedFrames,3000);
+window.addEventListener('pagehide',stopBrowserBroadcast);
