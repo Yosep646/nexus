@@ -127,6 +127,7 @@ async function startBrowserBroadcast(camera,card){
 // Railway bridge stays at its actual lower upload rate. Never display stale frames as live.
 const cameraMode = new Map();
 const cameraBusy = new Set();
+const cameraLastPoll = new Map();
 async function refreshPushedFrames(){
   if(!apiKey)return;
   await Promise.all([...document.querySelectorAll('#camera-grid .camera')].map(async card=>{
@@ -141,6 +142,9 @@ async function refreshPushedFrames(){
         mode={local:status.mode==='lan',checked:Date.now(),state:status.state};
         cameraMode.set(id,mode);
       }
+      const now=Date.now();
+      if(now-(cameraLastPoll.get(id)||0)<(mode.local?250:3000))return;
+      cameraLastPoll.set(id,now);
       const response=await api('/cameras/'+encodeURIComponent(id)+'/frame');
       const blob=await response.blob();
       if(!blob.type.startsWith('image/'))throw Error('Respuesta sin JPEG');
