@@ -30,3 +30,17 @@ button{background:#297a94;border-color:#3b91a7;color:#f5fbff}
 table th{font-size:10px}table td{font-size:11px}
 @media(max-width:1250px){.workspace{grid-template-columns:1fr}}
 @media(max-width:750px){.shell{display:block}.camera-grid{grid-template-columns:1fr}.map-panel #map{height:360px;min-height:360px}}
+
+/* Live CCTV overlays; status comes only from actual API camera state. */
+.camera .feed{overflow:hidden;isolation:isolate}
+.camera-health{position:absolute;top:10px;right:10px;z-index:4;padding:5px 8px;background:#07121ce8;border:1px solid #4d5e6d;color:#c3cdd6;border-radius:3px;font-size:10px;font-weight:800;letter-spacing:.055em}
+.camera-health[data-state="online"]{color:#8ef0bc;border-color:#326f52}
+.camera-health[data-state="connecting"]{color:#ffd18d;border-color:#896d42}
+.camera-health[data-state="offline"]{color:#ffadb2;border-color:#7c3f47}
+.frame-age{position:absolute;bottom:10px;left:10px;z-index:4;background:#06121cde;color:#c3d2dc;padding:4px 7px;font-size:10px;border-radius:2px}
+.camera .feed:has(.camera-frame) .feed-label,.camera .feed:has(video) .feed-label{background:#06121cdd}
+.camera .feed img.camera-frame{position:absolute;inset:0;z-index:1}
+.camera .feed .feed-label{z-index:4}
+#camera-grid .camera{min-width:0}
+#camera-grid .camera-info p{min-height:16px}
+#camera-grid .camera-state{font-size:11px;color:#b1bfcd}
