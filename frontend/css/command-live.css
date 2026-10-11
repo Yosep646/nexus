@@ -1,0 +1,51 @@
+/* NEXUS live command center: actual camera feeds, operational status, no simulated visuals. */
+:root{--bg:#07111d;--panel:#0c1c2b;--line:#20394e;--text:#e9f3fb;--muted:#87a6ba;--accent:#44bdd7}
+html{scroll-padding-top:20px}
+body{background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI",system-ui,sans-serif;font-synthesis:none}
+.shell{grid-template-columns:214px minmax(0,1fr)}
+.rail{background:#081523;border-right:1px solid #1d3447;box-shadow:none;padding:22px 12px}
+.brand{padding:8px 9px 30px;font-size:16px;letter-spacing:.035em}.brand small{letter-spacing:.14em}
+.rail nav{gap:4px}.rail nav a{border-radius:5px;font-size:12px;padding:13px 14px}.rail nav a:hover{background:#163045}
+.rail-foot{border-top:1px solid var(--line);font-size:10px;line-height:1.8}
+main{max-width:none;padding:22px clamp(15px,2vw,32px)}
+.top{margin-bottom:13px;padding-bottom:15px;border-bottom:1px solid var(--line)}
+.top h1{font-size:clamp(24px,2.2vw,33px);margin:3px 0;letter-spacing:-.045em;font-weight:750}
+.top h1 em{color:#65cbe1}.eyebrow{color:#69bbd2;font-size:10px;letter-spacing:.13em}
+.notice[hidden],.help[hidden]{display:none!important}
+.notice{margin-bottom:9px;background:#112b3d;border:1px solid #2e5269;border-radius:5px}
+.notice[data-level="error"]{color:#ffc5cb;background:#351e28;border-color:#864752}
+.alert-strip{padding:12px 15px;border-radius:6px;margin-bottom:10px;background:#102437;border:1px solid #2b4358}
+.alert-strip strong{font-size:11px}.alert-strip p{font-size:11px;margin-top:3px}.alert-icon{font-size:20px}
+.metrics{gap:9px;margin-bottom:10px}
+.tile,.panel{background:var(--panel);border:1px solid var(--line);border-radius:7px;box-shadow:none}
+.tile{min-height:102px;padding:13px 16px;transition:none}.tile:hover{transform:none}
+.tile span{font-size:10px;color:#95b0c3}.tile strong{font-size:28px;margin:4px 0 1px}.tile small{font-size:10px;color:#7998af}
+.tile .model-state{font-size:16px;margin:12px 0 7px}
+.status-ribbon{padding:9px 13px;border-radius:5px;margin-bottom:10px;background:#0b2233}
+.workspace{grid-template-columns:minmax(0,1.85fr) minmax(340px,1fr);gap:11px;align-items:start}
+.panel{padding:15px 16px;margin-bottom:11px}.panel h2{font-size:16px;font-weight:700}
+.panel-head{margin-bottom:12px}
+.primary-col,.secondary-col{min-width:0}
+.access-panel{padding:11px 14px}.access-panel .eyebrow{display:none}.access-panel h2{font-size:12px;margin-bottom:8px;color:#9ab8ca}
+.access-panel .auth{gap:7px}
+.camera-form{gap:7px}
+.camera-form input,.auth input{background:#071523;border:1px solid #31516a;border-radius:5px;padding:10px;color:#e6f2fa}
+button,.outline{border-radius:5px;box-shadow:none!important;transform:none!important;font-size:11px}
+button{background:#1786a6;border-color:#219dbb;color:#fff}.outline{background:#152b3e;color:#d3e7f4;border-color:#31516a}
+.camera-toolbar{margin-top:12px;color:#83a7bd;font-size:10px}
+.camera-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,315px),1fr));gap:9px;margin-top:11px}
+.camera{background:#06131f;border:1px solid #29455a;border-radius:5px;box-shadow:none}
+.feed,.camera .feed{height:auto;min-height:175px;aspect-ratio:16/9;position:relative;background:#02070d;overflow:hidden}
+.feed img,.feed video{width:100%;height:100%;object-fit:contain}
+.feed-icon{display:none}.feed-label{position:absolute;top:9px;bottom:auto;left:9px;padding:5px 7px;background:#061624d9;color:#d7e8f3;border:1px solid #355367;border-radius:3px;font-size:10px;z-index:3}
+.camera-info{padding:11px}.camera-info h3{font-size:13px;margin-bottom:5px}
+.camera-actions{gap:5px;margin:10px 0;flex-wrap:wrap}.camera-actions button{font-size:10px;padding:8px;min-width:0;flex:1 1 auto}
+.camera-state{font-size:10px;color:#8ba9bf}
+.empty{border-radius:5px;border-color:#304b61;background:#081827;padding:42px 12px}
+.map-panel #map{height:clamp(400px,48vh,590px);border-radius:4px;border:1px solid #29465c}
+table th{font-size:10px}table td{font-size:11px}
+footer{font-size:10px;border-top:1px solid var(--line);padding-top:12px}
+@media(max-width:1280px){.workspace{grid-template-columns:1fr}}
+@media(max-width:850px){.shell{grid-template-columns:180px minmax(0,1fr)}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.shell{display:block}.rail{position:relative;height:auto}.rail nav{display:flex;overflow-x:auto}.rail nav a{white-space:nowrap}.rail-foot{display:none}main{padding:13px}.camera-grid{grid-template-columns:1fr}.map-panel #map{height:340px;min-height:340px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
