@@ -1,0 +1,46 @@
+/* NEXUS RISK AI — globe-first operations design. Globe is decorative; live geo-data remains in Leaflet map. */
+:root{--glow-violet:#ae4cff;--glow-blue:#385bff;--glow-cyan:#4dd9ed}
+body{background:radial-gradient(ellipse at 60% 0%,#16103a 0,#080c1b 39%,#060a15 78%);color:#edf2ff}
+.shell{grid-template-columns:82px minmax(0,1fr)}
+.rail{background:#0b0b23;border-right:1px solid #33275d;padding:20px 9px;align-items:center}
+.brand{width:100%;display:flex;flex-direction:column;text-align:center;gap:8px;padding:6px 0 32px;font-size:10px;line-height:1.2;letter-spacing:.02em}
+.brand .symbol{font-size:30px;color:#ad62ff}.brand b{color:#bc77ff}.brand small{font-size:7px;letter-spacing:.06em}
+.rail nav{width:100%;gap:11px}.rail nav a{font-size:0;text-align:center;padding:13px 4px;border-radius:12px;line-height:1.6;color:#8990bd;letter-spacing:-.01em}
+.rail nav a::first-letter{font-size:21px}.rail nav a:hover{background:#251b47;color:#d7b2ff}
+.rail-foot{display:none}
+main{padding:19px clamp(14px,2vw,36px);max-width:none}
+.top{border-bottom:0;margin-bottom:12px;padding-bottom:0}
+.top h1{font-size:clamp(22px,2.2vw,32px);color:#f6f5ff}.top h1 em{color:#b972ff}
+.eyebrow{color:#b67cff}
+.status.ok{background:#183b3a;color:#64f5ca}.status.warn{background:#40293c;color:#f8bdc9}
+.command-hero{position:relative;min-height:clamp(370px,46vw,545px);border:1px solid #382b70;border-radius:17px;overflow:hidden;display:grid;grid-template-columns:minmax(240px,1fr) minmax(320px,1.6fr) minmax(155px,.62fr);align-items:center;padding:clamp(22px,3vw,44px);background:radial-gradient(ellipse at 57% 53%,#1b1557 0%,#0d1030 37%,#080c1c 75%);box-shadow:0 16px 65px #02030d88,inset 0 0 70px #7b43ff0b;margin-bottom:13px}
+.command-hero::before{content:"";position:absolute;inset:0;opacity:.21;pointer-events:none;background-image:linear-gradient(#7956b817 1px,transparent 1px),linear-gradient(90deg,#7956b817 1px,transparent 1px);background-size:35px 35px}
+.command-hero::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,#0a0d23ad,transparent 32%,transparent 72%,#0a0d23aa)}
+.hero-copy,.hero-aside{position:relative;z-index:4}.hero-overline{font-size:10px;letter-spacing:.14em;color:#aa95dc;font-weight:750}.hero-overline i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#7cdbfb;box-shadow:0 0 13px #7cdbfb;margin-right:7px}
+.hero-copy h2{font-size:clamp(29px,3.2vw,52px);letter-spacing:-.06em;line-height:1.09;margin:22px 0 14px;font-weight:800}.hero-copy h2 em{font-style:normal;background:linear-gradient(90deg,#bb70ff,#58d6f5);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-copy p{color:#9eabd1;font-size:13px;line-height:1.65;max-width:280px}
+.hero-legend{display:flex;flex-direction:column;gap:14px;margin-top:40px}.hero-legend span{font-size:9px;letter-spacing:.1em;color:#abb7d5;font-weight:750}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:9px}.dot.cyan{background:#52dbf5;box-shadow:0 0 9px #52dbf5}.dot.violet{background:#b364ff;box-shadow:0 0 9px #b364ff}.dot.green{background:#4be8b0;box-shadow:0 0 9px #4be8b0}
+.earth-stage{position:relative;min-height:420px;height:100%;display:grid;place-items:center;isolation:isolate;z-index:2}
+.earth-glow{position:absolute;width:80%;aspect-ratio:1;border-radius:50%;background:#7135ff;filter:blur(62px);opacity:.28}
+.earth-sphere{width:min(100%,440px);aspect-ratio:1;border-radius:50%;position:relative;overflow:hidden;box-shadow:inset -46px -26px 72px #02091ae6,inset 22px 18px 42px #9e6bff80,0 0 9px 2px #b75aff,0 0 42px 12px #7145ff88,0 0 100px 20px #323aff38;background:radial-gradient(circle at 35% 29%,#9a57ff 0%,#4138b5 25%,#121a65 60%,#070b29 90%);transform:rotate(-12deg)}
+.earth-map{position:absolute;inset:-5%;border-radius:50%;opacity:.8;background-image:url("https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg");background-size:auto 100%;background-position:44% center;mix-blend-mode:screen;filter:contrast(1.8) saturate(.4) hue-rotate(42deg);mask-image:radial-gradient(circle at 45% 47%,#000 40%,transparent 70%)}
+.earth-atmosphere{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 32% 24%,#f4b8ff55,transparent 34%),repeating-linear-gradient(0deg,transparent 0,transparent 17px,#ba83ff13 18px,#ba83ff13 19px),linear-gradient(90deg,transparent 40%,#020a2b91 100%);box-shadow:inset 0 0 22px #d5a4ff88}
+.orbit{position:absolute;border:1px solid #a65dff54;border-radius:50%;width:113%;height:43%;transform:rotate(-26deg);box-shadow:0 0 17px #a359ff18}
+.orbit-b{transform:rotate(57deg);height:48%;width:116%;border-color:#42b3f344}
+.orbit-pin{position:absolute;width:8px;height:8px;background:#c87cff;border:2px solid #ffe7ff;border-radius:50%;box-shadow:0 0 19px #e37cff}.pin-one{top:25%;left:19%}.pin-two{bottom:25%;right:17%}
+.hero-aside{align-self:center;padding-left:12px}.hero-side-title{font-size:10px;letter-spacing:.1em;color:#b2a0d4;border-bottom:1px solid #604b8d88;padding-bottom:15px;margin-bottom:20px}
+.hero-side-stat{margin-bottom:25px}.hero-side-stat span{display:block;color:#8e9cc4;font-size:9px;letter-spacing:.13em;margin-bottom:6px}.hero-side-stat strong{font-size:clamp(14px,1.45vw,20px);color:#eee7ff;letter-spacing:.02em}
+.hero-action{display:inline-flex;font-size:10px;letter-spacing:.07em;color:#e6ceff;border:1px solid #7753b9;padding:12px;border-radius:6px;background:#302051b0}
+.metrics{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.tile,.panel{background:linear-gradient(145deg,#121329,#0b1124);border:1px solid #332e58;border-radius:10px;box-shadow:0 6px 24px #02040d45}
+.tile{min-height:112px;padding:17px}.tile span{color:#a7a1cc}.tile strong{color:#f1efff}.tile small{color:#8c8baa}
+.panel{padding:17px}.panel h2{color:#f2f0ff}.workspace{grid-template-columns:minmax(0,1.65fr) minmax(330px,1fr)}
+.status-ribbon{background:#13152e;border-color:#35315d}.alert-strip{background:#211733;border-color:#5b3d7b}.alert-strip strong{color:#f0ddff}
+.camera{border-color:#3e3669;background:#090d20}.camera .feed{background:#030513}.feed-label{border-color:#68499a;background:#0b0b20e8;color:#eadcff}
+.camera-form input,.auth input{background:#0a1022;border-color:#4b3b70}
+button{background:#6935ba;border-color:#8253ce}.outline{background:#1c1b3b;border-color:#4b3e79;color:#dcd1f8}
+.map-panel #map{border-color:#40345e}.rail nav a:focus-visible,.hero-action:focus-visible,button:focus-visible{outline:2px solid #d0a0ff;outline-offset:2px}
+@media(max-width:1180px){.command-hero{grid-template-columns:minmax(210px,1fr) minmax(280px,1.5fr);min-height:430px}.hero-aside{display:none}.earth-stage{min-height:350px}.earth-sphere{max-width:340px}.workspace{grid-template-columns:1fr}}
+@media(max-width:750px){.shell{display:block}.rail{position:static;width:100%;height:auto;display:block}.brand{display:block;padding:4px}.rail nav{display:flex;overflow:auto}.rail nav a{font-size:11px;white-space:nowrap}.rail nav a::first-letter{font-size:11px}.command-hero{grid-template-columns:1fr;min-height:560px;padding:24px}.hero-copy h2{font-size:32px}.hero-legend{margin-top:16px;gap:9px}.earth-stage{min-height:260px;height:270px}.earth-sphere{max-width:255px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:no-preference){.earth-sphere{animation:earth-float 9s ease-in-out infinite}.orbit-a{animation:orbit-drift 30s linear infinite}@keyframes earth-float{0%,100%{translate:0 0}50%{translate:0 -8px}}@keyframes orbit-drift{from{rotate:0deg}to{rotate:360deg}}}
