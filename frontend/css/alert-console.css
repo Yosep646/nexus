@@ -1,0 +1,28 @@
+/* Smaller decorative globe, with live risk advisories promoted above camera/map workspace. */
+.command-hero.command-hero-compact{min-height:265px;max-height:320px;grid-template-columns:minmax(220px,1fr) minmax(250px,1fr) minmax(150px,.65fr);padding:22px 32px;margin-bottom:11px}
+.command-hero-compact .hero-copy h2{font-size:clamp(25px,2.6vw,39px);margin:12px 0 8px}
+.command-hero-compact .hero-copy p{font-size:11px;margin:0}
+.command-hero-compact .hero-legend{margin-top:20px;gap:9px}
+.command-hero-compact .earth-stage{min-height:240px;height:255px}
+.command-hero-compact .earth-sphere{width:230px;max-width:85%;box-shadow:inset -28px -20px 48px #02091ae6,inset 12px 13px 32px #9e6bff80,0 0 8px 2px #b75aff,0 0 26px 7px #7145ff77}
+.command-hero-compact .earth-glow{width:55%;filter:blur(38px)}
+.command-hero-compact .orbit{width:94%;height:38%}
+.command-hero-compact .hero-side-stat{margin-bottom:13px}
+.command-hero-compact .hero-side-title{margin-bottom:12px;padding-bottom:9px}
+.command-hero-compact .hero-action{padding:9px}
+.alert-console{margin:10px 0 12px;padding:16px 18px;background:linear-gradient(120deg,#1b1733,#11142b);border:1px solid #514178}
+.alert-console .panel-head{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:9px}
+.alert-console h2{font-size:18px}
+.alert-console .alert-actions{display:flex;flex-wrap:wrap;gap:8px}
+.alert-console .alert-count{font-size:11px;color:#c3b3e2;margin-bottom:10px}
+.alert-console .advisory-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,285px),1fr));gap:9px;max-height:300px;overflow:auto}
+.alert-console .advisory{padding:13px 15px;border:1px solid #58467c;border-radius:7px;background:#14172e;min-width:0}
+.alert-console .advisory strong{color:#f2d6ff;font-size:12px}
+.alert-console .advisory p{color:#c7bddf;font-size:11px;line-height:1.55;margin:8px 0}
+.alert-console .advisory small{color:#a69ec5;font-size:10px}
+.alert-console .advisory-list>.help{color:#c5b6dc;padding:12px;margin:0;background:#13172d;border:1px dashed #4b3d6b;border-radius:6px}
+.alert-console .review-actions{display:flex;gap:8px;margin-top:11px}
+.alert-console .review-actions button{flex:1 1 auto}
+.alert-strip{margin-bottom:10px}
+@media(max-width:1050px){.command-hero.command-hero-compact{grid-template-columns:minmax(180px,1fr) minmax(220px,1fr);min-height:260px}.command-hero-compact .hero-aside{display:none}}
+@media(max-width:650px){.command-hero.command-hero-compact{grid-template-columns:1fr;max-height:none;padding:18px;gap:6px}.command-hero-compact .hero-legend{flex-direction:row;flex-wrap:wrap;gap:8px 14px}.command-hero-compact .earth-stage{min-height:185px;height:195px}.command-hero-compact .earth-sphere{width:170px}.alert-console{padding:12px}.alert-console .advisory-list{grid-template-columns:1fr}}
