@@ -1,0 +1,37 @@
+{
+  "sources": [
+    {
+      "id": "floodnet-supervised",
+      "title": "FloodNet Supervised v1.0",
+      "homepage": "https://github.com/BinaLab/FloodNet-Supervised_v1.0",
+      "download_page": "https://www.dropbox.com/scl/fo/k33qdif15ns2qv2jdxvhx/ANGaa8iPRhvlrvcKXjnmNRc?rlkey=ao2493wzl1cltonowjdbrnp7f&e=2&dl=0",
+      "license": "CDLA-Permissive-1.0",
+      "modality": "aerial RGB, semantic segmentation",
+      "target_classes": ["inundacion"],
+      "import_status": "requires_download_and_manual_label_mapping",
+      "notes": "2343 images, not 2343 confirmed flood classification examples. Preserve upstream splits and attribution."
+    },
+    {
+      "id": "landslide4sense",
+      "title": "Landslide4Sense",
+      "homepage": "https://zenodo.org/records/10463239",
+      "download_page": "https://zenodo.org/records/10463239",
+      "license": "verify-original-distribution-terms",
+      "modality": "multispectral remote sensing segmentation",
+      "target_classes": ["deslizamiento de tierra"],
+      "import_status": "requires_manual_conversion_and_label_mapping",
+      "notes": "Multispectral HDF5 cannot be treated as ordinary phone RGB JPEG images. Verify terms and adapt the model input."
+    },
+    {
+      "id": "nasa-coolr",
+      "title": "NASA COOLR Landslide Catalog",
+      "homepage": "https://gpm.nasa.gov/applications/landslides/reporter-faq",
+      "download_page": "https://landslides.nasa.gov/viewer",
+      "license": "check-individual-image-and-catalog-use-rights",
+      "modality": "geospatial event records",
+      "target_classes": ["huayco", "deslizamiento de tierra"],
+      "import_status": "metadata-only-not-labeled-images",
+      "notes": "Event catalog is not a ready-to-train camera image dataset."
+    }
+  ]
+}
