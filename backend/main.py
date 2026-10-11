@@ -50,5 +50,5 @@ if FRONTEND_DIR.is_dir():
 @app.get("/", include_in_schema=False)
 def home():
     if FRONTEND_DIR.is_dir():
-        return RedirectResponse(url="/dashboard/demo.html?v=20261011-alerts3", status_code=307)
+        return RedirectResponse(url="/dashboard/demo.html?v=20261011-compact4", status_code=307)
     return {"service": "nexus-risk-ai", "status": "ok", "health": "/health", "docs": "/docs"}
