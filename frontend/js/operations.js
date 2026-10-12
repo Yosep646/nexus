@@ -185,7 +185,7 @@ async function refreshPushedFrames(){
       if(mode?.local){
         state.textContent='OpenCV LAN: cámara desconectada o esperando fotogramas. Comprueba IP, puerto y red.';
       }else{
-        state.textContent='IP Webcam sin señal en Railway. En la laptop con el teléfono en la misma Wi-Fi: abre PowerShell en la carpeta NEXUS y ejecuta git pull origin main; luego powershell -ExecutionPolicy Bypass -File .\\scripts\\start_camera_bridge.ps1. Introduce la URL http://IP_DEL_TELEFONO:8080/video. Mantén la consola abierta; si falla, revisa su diagnóstico TCP/OpenCV. El botón Conectar cámara IP utiliza la webcam del navegador, no IP Webcam.';
+        state.textContent='IP Webcam sin señal en Railway. En la laptop con el teléfono en la misma Wi-Fi: abre PowerShell en la carpeta NEXUS y ejecuta git pull origin main; luego powershell -ExecutionPolicy Bypass -File .\\scripts\\start_camera_bridge.ps1. Introduce la URL http://IP_DEL_TELEFONO:8080/video. Mantén la consola abierta; si falla, revisa su diagnóstico TCP/OpenCV. El botón Conectar cámara IP verifica la recepción del puente OpenCV; no abre la webcam de la laptop.';
       }
       const old=card.querySelector('.feed img.camera-frame');
       if(old){if(old.src.startsWith('blob:'))URL.revokeObjectURL(old.src);old.remove();}
