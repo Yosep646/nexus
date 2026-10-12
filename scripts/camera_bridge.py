@@ -13,7 +13,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, urlsplit, urlunsplit
 from uuid import UUID
 
 import cv2
@@ -109,6 +109,10 @@ def main():
         return 2
 
     camera_parts = urlsplit(args.camera_url)
+    if camera_parts.scheme in ("http", "https") and camera_parts.path in ("", "/"):
+        args.camera_url = urlunsplit((camera_parts.scheme, camera_parts.netloc, "/video", "", ""))
+        camera_parts = urlsplit(args.camera_url)
+        print("IP Webcam: URL normalizada a /video", flush=True)
     if not camera_parts.hostname:
         parser.error("URL de IP Webcam sin host")
     camera_port = camera_parts.port or (554 if camera_parts.scheme == "rtsp" else 443 if camera_parts.scheme == "https" else 80)
@@ -134,6 +138,11 @@ def main():
         print("TCP conectado. Abriendo OpenCV...", flush=True)
         try:
             capture = open_camera(args.camera_url)
+            if not capture.isOpened() and camera_parts.scheme in ("http", "https") and camera_parts.path == "/video":
+                fallback = urlunsplit((camera_parts.scheme, camera_parts.netloc, "/videofeed", "", ""))
+                print("Probando ruta alternativa /videofeed...", flush=True)
+                capture.release()
+                capture = open_camera(fallback)
         except (cv2.error, OSError) as exc:
             print("OpenCV:", type(exc).__name__, "reintentando en 5 s", flush=True)
             time.sleep(5)
@@ -143,7 +152,7 @@ def main():
             print("TCP accesible, OpenCV no abre: revisa /video, formato y permisos.", flush=True)
             time.sleep(5)
             continue
-        print("OpenCV conectado. Enviando fotogramas HTTPS...", flush=True)
+        print("OpenCV conectado. Enviando fotogramas a NEXUS...", flush=True)
         try:
             while True:
                 started = time.monotonic()
