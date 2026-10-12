@@ -7,14 +7,16 @@ $ErrorActionPreference = 'Stop'
 Set-Location (Resolve-Path (Join-Path $PSScriptRoot '..'))
 $python = Join-Path (Get-Location) '.venv-bridge\Scripts\python.exe'
 if (-not (Test-Path $python)) { throw "Primero ejecuta scripts\install_camera_bridge.ps1" }
-if (-not $env:NEXUS_API_KEY) {
-  $secret = Read-Host "Introduce tu API Key de NEXUS (no se guardara en disco)" -AsSecureString
+$localServer = $Server -match '^http://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?/?$'
+if (-not $localServer -and -not $env:NEXUS_API_KEY) {
+  $secret = Read-Host "API Key para Railway (servidor publico)" -AsSecureString
   $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secret)
   try { $env:NEXUS_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
   finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
 }
-if (-not $env:NEXUS_API_KEY) { throw "La API Key es obligatoria" }
-$headers = @{ "X-API-Key" = $env:NEXUS_API_KEY }
+if (-not $localServer -and -not $env:NEXUS_API_KEY) { throw "Railway requiere autenticacion. Para uso sin clave inicia el backend en localhost." }
+$headers = @{}
+if ($env:NEXUS_API_KEY) { $headers["X-API-Key"] = $env:NEXUS_API_KEY }
 $cameras = Invoke-RestMethod -Uri "$Server/api/cameras" -Headers $headers -TimeoutSec 20
 if (-not $cameras -or $cameras.Count -eq 0) { throw "No hay camaras registradas. Registra tu camara en el dashboard primero." }
 Write-Host "Camaras registradas:" -ForegroundColor Cyan
