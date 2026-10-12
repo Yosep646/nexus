@@ -8,6 +8,7 @@ The local agent never exposes an inbound port and never sends secrets in URLs or
 """
 import argparse
 import json
+import socket
 import os
 import sys
 import time
@@ -108,10 +109,30 @@ def main():
         print("ERROR al validar Railway:", error_text(exc), flush=True)
         return 2
 
+    camera_parts = urlsplit(args.camera_url)
+    if not camera_parts.hostname:
+        parser.error("URL de IP Webcam sin host")
+    camera_port = camera_parts.port or (554 if camera_parts.scheme == "rtsp" else 443 if camera_parts.scheme == "https" else 80)
     delay = 1.0 / args.fps
     consecutive_upload_errors = 0
     while True:
-        print("Conectando OpenCV a la cámara local...", flush=True)
+        print(f"Comprobando TCP {camera_parts.hostname}:{camera_port}...", flush=True)
+        try:
+            with socket.create_connection((camera_parts.hostname, camera_port), timeout=5):
+                pass
+        except ConnectionRefusedError:
+            print("Puerto rechazado: inicia IP Webcam o revisa el puerto.", flush=True)
+            time.sleep(5)
+            continue
+        except socket.timeout:
+            print("Timeout: revisa Wi-Fi, IP y aislamiento de clientes.", flush=True)
+            time.sleep(5)
+            continue
+        except OSError as exc:
+            print(f"Error de red: {type(exc).__name__}: {exc}", flush=True)
+            time.sleep(5)
+            continue
+        print("TCP conectado. Abriendo OpenCV...", flush=True)
         try:
             capture = open_camera(args.camera_url)
         except (cv2.error, OSError) as exc:
@@ -120,7 +141,7 @@ def main():
             continue
         if not capture.isOpened():
             capture.release()
-            print("No se pudo abrir la cámara. Revisa IP, puerto, Wi-Fi y ruta /video.", flush=True)
+            print("TCP accesible, OpenCV no abre: revisa /video, formato y permisos.", flush=True)
             time.sleep(5)
             continue
         print("OpenCV conectado. Enviando fotogramas HTTPS...", flush=True)
@@ -142,7 +163,7 @@ def main():
                 except urllib.error.HTTPError as exc:
                     print("Railway rechazó el fotograma:", error_text(exc), flush=True)
                     if exc.code in (401, 403, 404):
-                        print("Revisa la API Key o el ID de cámara.", flush=True)
+                        print("Revisa el ID de cámara o la autorización del servidor remoto.", flush=True)
                         return 3
                     consecutive_upload_errors += 1
                 except (urllib.error.URLError, TimeoutError, OSError, ValueError, RuntimeError) as exc:
