@@ -173,6 +173,9 @@ def main():
                     with api_request(endpoint, key, data=jpeg, timeout=10) as response:
                         if response.status != 200:
                             raise RuntimeError(f"Respuesta inesperada: {response.status}")
+                        receipt = json.load(response)
+                    if receipt.get("status") != "received" or receipt.get("camera_id") != args.camera_id:
+                        raise RuntimeError("Railway no confirmó el ID de cámara ni la recepción del JPEG")
                     consecutive_upload_errors = 0
                     uploaded_frames += 1
                     if uploaded_frames == 1 or uploaded_frames % 20 == 0:
@@ -193,7 +196,7 @@ def main():
                         print("Revisa el ID de cámara o la autorización del servidor remoto.", flush=True)
                         return 3
                     consecutive_upload_errors += 1
-                except (urllib.error.URLError, TimeoutError, OSError, ValueError, RuntimeError) as exc:
+                except (urllib.error.URLError, TimeoutError, OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
                     print("Fallo de captura/envío:", error_text(exc), flush=True)
                     consecutive_upload_errors += 1
                 if consecutive_upload_errors >= 5:
