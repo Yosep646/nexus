@@ -100,10 +100,13 @@ def main():
         if not any(str(c.get("id")) == args.camera_id for c in cameras):
             print("ERROR: ID de cámara no registrado en este servidor.", flush=True)
             return 2
-        with api_request(f"{root}/api/model/status", key) as response:
-            model_status = json.load(response)
-        print("API conectada. IA:", "disponible" if model_status.get("ready") else
-              "modelo no cargado; el video sí puede transmitirse.", flush=True)
+        try:
+            with api_request(f"{root}/api/model/status", key) as response:
+                model_status = json.load(response)
+            print("API conectada. IA:", "disponible" if model_status.get("ready") else
+                  "modelo no cargado; el video sí puede transmitirse.", flush=True)
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError) as model_error:
+            print("Estado IA no disponible; continuando con la transmisión:", error_text(model_error), flush=True)
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError) as exc:
         print("ERROR al validar Railway:", error_text(exc), flush=True)
         return 2
