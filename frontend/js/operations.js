@@ -141,7 +141,7 @@ const detectionTiming = new Map();
 const cameraMode = new Map();
 const cameraBusy = new Set();
 const cameraLastPoll = new Map();
-async async function refreshPushedFrames(){
+async function refreshPushedFrames(){
   if(!apiKey)return;
   await Promise.all([...document.querySelectorAll('#camera-grid .camera')].map(async card=>{
     if(browserBroadcast?.cameraId===card.dataset.cameraId)return;
