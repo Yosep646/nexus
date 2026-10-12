@@ -2,10 +2,8 @@
 Build with scripts/build_camera_bridge.ps1 on Windows.
 """
 import json
-import runpy
 import sys
 import urllib.request
-from pathlib import Path
 
 SERVER = "https://nexus-production-6562.up.railway.app"
 
@@ -26,8 +24,13 @@ def main():
         if index < 0 or index >= len(cameras):
             raise ValueError("Selección fuera de rango")
         camera = cameras[index]
-        default_url = camera.get("url") or "http://192.168.1.50:8080/video"
-        url = input(f"URL IP Webcam [{default_url}]: ").strip() or default_url
+        default_url = (camera.get("url") or "").strip()
+        if default_url:
+            url = input(f"URL actual de {camera.get('name', 'cámara')} [Enter para {default_url}]: ").strip() or default_url
+        else:
+            url = input(f"URL de {camera.get('name', 'cámara')} (protocolo://IP:PUERTO/ruta): ").strip()
+        if not url:
+            raise ValueError("Debes proporcionar una URL para esta cámara.")
         import camera_bridge
         sys.argv = ["camera_bridge", "--camera-url", url,
                     "--camera-id", str(camera["id"]), "--server", server, "--fps", "2"]
