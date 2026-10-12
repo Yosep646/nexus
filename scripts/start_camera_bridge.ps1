@@ -1,6 +1,6 @@
 # NEXUS RISK AI - Conectar cámara IP local a Railway.
 param(
-  [string]$CameraUrl = "http://192.168.0.16:8080/video",
+  [string]$CameraUrl = "",
   [string]$Server = "https://nexus-production-6562.up.railway.app"
 )
 $ErrorActionPreference = 'Stop'
@@ -26,6 +26,21 @@ if ([string]::IsNullOrWhiteSpace($selection)) { $selection = "0" }
 $index = 0
 if (-not [int]::TryParse($selection, [ref]$index) -or $index -lt 0 -or $index -ge $cameras.Count) { throw "Seleccion invalida" }
 $camera = $cameras[$index]
-if ($CameraUrl -eq "http://192.168.0.16:8080/video" -and $camera.url) { $CameraUrl = $camera.url }
+if (-not $CameraUrl) { $CameraUrl = $camera.url }
+Write-Host "URL de camara configurada: $CameraUrl" -ForegroundColor Cyan
+$override = Read-Host "URL IP Webcam actual (Enter para mantener la anterior)"
+if (-not [string]::IsNullOrWhiteSpace($override)) { $CameraUrl = $override.Trim() }
+try {
+  $uri = [Uri]$CameraUrl
+  if ($uri.Scheme -notin @('http','https','rtsp')) { throw "Protocolo no compatible" }
+  Write-Host "Comprobando TCP $($uri.Host):$($uri.Port)..." -ForegroundColor Cyan
+  $tcp = Test-NetConnection -ComputerName $uri.Host -Port $uri.Port -WarningAction SilentlyContinue
+  if (-not $tcp.TcpTestSucceeded) {
+    Write-Warning "No se puede conectar al puerto. Revisa Start server en IP Webcam, Wi-Fi y AP Isolation."
+    $continue = Read-Host "Intentar OpenCV de todas formas? (s/N)"
+    if ($continue -ne 's') { exit 2 }
+  }
+} catch { Write-Warning "Diagnostico TCP: $($_.Exception.Message)" }
+
 Write-Host "Conectando $($camera.name) desde $CameraUrl a NEXUS. Manten esta ventana abierta." -ForegroundColor Green
 & $python scripts/camera_bridge.py --camera-url $CameraUrl --camera-id $camera.id --server $Server --fps 2
