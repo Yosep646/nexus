@@ -59,7 +59,7 @@ async def camera_stream(camera_id: str):
                     yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpg + b'\r\n'
                 await asyncio.sleep(0.15)
         return StreamingResponse(frames(), media_type='multipart/x-mixed-replace; boundary=frame', headers={'Cache-Control':'no-store'})
-    return await mjpeg(camera_id)
+    raise HTTPException(status_code=409, detail="MJPEG direct IP streaming requires NEXUS_LAN_MODE=true on a local trusted host; cloud mode uses the uploaded frame endpoint")
 
 
 @router.get("/cameras/{camera_id}/snapshot")
@@ -77,28 +77,16 @@ async def camera_snapshot(camera_id: str):
         if jpeg is None:
             raise HTTPException(status_code=503, detail="No recent LAN camera frame")
         return Response(content=jpeg, media_type="image/jpeg", headers={"Cache-Control":"no-store"})
-    try:
-        _validate_url(camera["url"])
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-    def read_one():
-        capture = cv2.VideoCapture(camera["url"])
-        try:
-            if not capture.isOpened():
-                return None
-            ok, frame = capture.read()
-            if not ok:
-                return None
-            ok, jpg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
-            return jpg.tobytes() if ok else None
-        finally:
-            capture.release()
-
-    data = await run_in_threadpool(read_one)
-    if data is None:
-        raise HTTPException(status_code=503, detail="Camera stream unreachable from server")
-    return Response(content=data, media_type="image/jpeg",
+    # Cloud hosts must never connect to a private camera IP.
+    # Serve only recently uploaded, authenticated frames.
+    from pathlib import Path
+    import os
+    import time
+    directory = Path(os.getenv("NEXUS_CAMERA_FRAMES_DIR", "/app/data/camera_frames" if Path("/app/data").is_dir() else "data/camera_frames"))
+    target = directory / (camera_id + ".jpg")
+    if not target.is_file() or time.time() - target.stat().st_mtime > 15:
+        raise HTTPException(status_code=503, detail="No recent frame from trusted local camera bridge")
+    return Response(content=target.read_bytes(), media_type="image/jpeg",
                     headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
 
 
