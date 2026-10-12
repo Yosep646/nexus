@@ -112,10 +112,6 @@ def main():
         return 2
 
     camera_parts = urlsplit(args.camera_url)
-    if camera_parts.scheme in ("http", "https") and camera_parts.path in ("", "/"):
-        args.camera_url = urlunsplit((camera_parts.scheme, camera_parts.netloc, "/video", "", ""))
-        camera_parts = urlsplit(args.camera_url)
-        print("IP Webcam: URL normalizada a /video", flush=True)
     if not camera_parts.hostname:
         parser.error("URL de IP Webcam sin host")
     try:
