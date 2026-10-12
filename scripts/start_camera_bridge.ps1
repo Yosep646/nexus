@@ -26,15 +26,23 @@ $index = 0
 if (-not [int]::TryParse($selection, [ref]$index) -or $index -lt 0 -or $index -ge $cameras.Count) { throw "Seleccion invalida." }
 $camera = $cameras[$index]
 if (-not $CameraUrl) { $CameraUrl = $camera.url }
-if ([string]::IsNullOrWhiteSpace($CameraUrl)) { $CameraUrl = "http://192.168.1.50:8080/video" }
-$override = Read-Host "URL actual de IP Webcam (Enter para $CameraUrl)"
-if (-not [string]::IsNullOrWhiteSpace($override)) { $CameraUrl = $override.Trim() }
-$cameraUri = [Uri]$CameraUrl
+if ([string]::IsNullOrWhiteSpace($CameraUrl)) {
+  $CameraUrl = Read-Host "Introduce URL de la camara seleccionada (ej. http://IP:PUERTO/video)"
+} else {
+  $override = Read-Host "URL actual de esta camara (Enter para usar la registrada)"
+  if (-not [string]::IsNullOrWhiteSpace($override)) { $CameraUrl = $override.Trim() }
+}
+if ([string]::IsNullOrWhiteSpace($CameraUrl)) { throw "No se especifico URL para la camara seleccionada." }
+$cameraUri = $null
+if (-not [Uri]::TryCreate($CameraUrl, [UriKind]::Absolute, [ref]$cameraUri)) {
+  throw "URL invalida. Indica la direccion de esta camara, incluyendo protocolo y puerto."
+}
 if ($cameraUri.AbsolutePath -eq '/') {
   $CameraUrl = $CameraUrl.TrimEnd('/') + '/video'
   $cameraUri = [Uri]$CameraUrl
 }
-Write-Host "IP Webcam: $CameraUrl" -ForegroundColor Cyan
+Write-Host "Camara seleccionada: $($camera.name) | ID: $($camera.id)" -ForegroundColor Cyan
+Write-Host "Destino LAN: $($cameraUri.Host):$($cameraUri.Port)$($cameraUri.AbsolutePath)" -ForegroundColor Cyan
 try {
   $probe = Invoke-WebRequest -Uri $cameraUri.GetLeftPart([System.UriPartial]::Authority) -UseBasicParsing -TimeoutSec 5
   Write-Host "Servidor HTTP IP Webcam responde: $($probe.StatusCode)" -ForegroundColor Green
