@@ -2,14 +2,13 @@ import os
 import asyncio
 from backend.detection.monitor import monitor_loop
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from backend.database.storage import init_db
 from backend.api.routes import router
-from backend.security import require_api_key
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,8 +32,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="NEXUS RISK AI", version="0.4.0", lifespan=lifespan)
 origins = os.getenv("NEXUS_CORS_ORIGINS", "http://127.0.0.1:5500,http://localhost:5500").split(",")
-app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in origins if o.strip()], allow_methods=["GET","POST","PATCH","DELETE"], allow_headers=["Content-Type","X-API-Key"])
-app.include_router(router, prefix="/api", dependencies=[Depends(require_api_key)])
+app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in origins if o.strip()], allow_methods=["GET","POST","PATCH","DELETE"], allow_headers=["Content-Type"])
+app.include_router(router, prefix="/api")
 
 @app.get("/health")
 def health():
@@ -42,7 +41,7 @@ def health():
 
 
 # Serve the operational dashboard from the same Railway hostname.
-# API routes remain protected by X-API-Key.
+# WARNING: Public API endpoints have no authentication. Restrict deployment access before using real cameras.
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 if FRONTEND_DIR.is_dir():
     app.mount("/dashboard", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="dashboard")
