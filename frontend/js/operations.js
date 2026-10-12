@@ -207,7 +207,7 @@ $('refresh').onclick=loadData;
 $('alert-filter').onchange=()=>renderAdvisories(advisoryCache);
 $('enable-notifications').onclick=async()=>{if(!('Notification' in window)){message('Este navegador no admite notificaciones.');return;}if(!window.isSecureContext){message('Las notificaciones requieren HTTPS.');return;}const permission=await Notification.requestPermission();message(permission==='granted'?'Avisos activados para nuevas señales pendientes mientras la página esté abierta.':'El navegador no concedió permiso de notificaciones.');};
 $('pdf-report').onclick=async e=>{e.preventDefault();if(!apiKey){message('Conecta la API primero.');return;}try{const response=await api('/reports/detections.pdf');const blob=await response.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='nexus-reporte-detecciones.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}catch(err){message('No se pudo exportar: '+err.message)}};
-const tick=()=>{$('clock').textContent=new Date().toLocaleString('es-PE')};tick();setInterval(tick,30000);initMap();setCameraAuth(false);
+const tick=()=>{$('clock').textContent=new Date().toLocaleString('es-PE')};tick();setInterval(tick,30000);initMap();setCameraAuth(false);if(['localhost','127.0.0.1'].includes(location.hostname)){apiKey='local-loopback';$('auth-note').textContent='Modo local: sin API Key (requiere NEXUS_LOCAL_NO_AUTH=true).';setCameraAuth(true);loadData();}
 fetch('/health',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('HTTP '+r.status);setConnection('Servidor en línea',true);message('')}).catch(()=>{setConnection('Servidor desconectado');message('No se pudo conectar con el backend.')});
 setInterval(()=>{if(apiKey)loadData()},30000);
 
