@@ -20,7 +20,9 @@ import cv2
 
 
 def api_request(url, key, *, data=None, timeout=10):
-    headers = {"X-API-Key": key, "Accept": "application/json"}
+    headers = {"Accept": "application/json"}
+    if key:
+        headers["X-API-Key"] = key
     if data is not None:
         headers["Content-Type"] = "image/jpeg"
     request = urllib.request.Request(url, headers=headers, data=data,
@@ -74,15 +76,16 @@ def main():
     parser.add_argument("--fps", type=float, default=2.0)
     args = parser.parse_args()
     key = os.environ.get("NEXUS_API_KEY", "").strip()
-    if not key:
-        parser.error("Falta NEXUS_API_KEY en el entorno local")
     try:
         UUID(args.camera_id)
     except ValueError:
         parser.error("camera-id debe ser el UUID de una cámara registrada en Railway")
     server = urlsplit(args.server)
-    if server.scheme != "https" or not server.netloc or server.username or server.password:
-        parser.error("El servidor debe ser una URL HTTPS sin credenciales")
+    if (server.scheme != "https" and not (server.scheme == "http" and server.hostname in ("localhost", "127.0.0.1", "::1"))) or not server.netloc or server.username or server.password:
+        parser.error("Usa HTTPS o HTTP únicamente para localhost")
+    local_hosts = ("127.0.0.1", "localhost", "::1")
+    if not key and server.hostname not in local_hosts:
+        parser.error("Railway requiere autenticación; sin API Key solo se admite backend local")
     if not 0.2 <= args.fps <= 5:
         parser.error("--fps debe estar entre 0.2 y 5")
     if urlsplit(args.camera_url).scheme not in ("http", "https", "rtsp"):
@@ -99,7 +102,7 @@ def main():
             return 2
         with api_request(f"{root}/api/model/status", key) as response:
             model_status = json.load(response)
-        print("API autenticada. IA:", "disponible" if model_status.get("ready") else
+        print("API conectada. IA:", "disponible" if model_status.get("ready") else
               "modelo no cargado; el video sí puede transmitirse.", flush=True)
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError) as exc:
         print("ERROR al validar Railway:", error_text(exc), flush=True)
