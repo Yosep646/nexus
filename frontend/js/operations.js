@@ -8,7 +8,7 @@ const message = (s) => { const el=$('message'); el.textContent=s; el.hidden=!s |
 function setCameraAuth(connected){const status=$('camera-auth-status');if(status){status.textContent=connected?'Acceso autorizado':'Acceso restringido';status.hidden=true;}const button=document.querySelector('#camera-form button[type="submit"]');if(button){button.disabled=!connected;button.title=connected?'Registrar cámara':'Requiere autorización';}}
 const escape = (s) => String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const api = async (path, options={}) => {
-  const response = await fetch('/api'+path,{...options,headers:{'X-API-Key':apiKey,...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})},cache:'no-store'});
+  const response = await fetch('/api'+path,{...options,headers:{...(apiKey&&apiKey!=='local-loopback'?{'X-API-Key':apiKey}:{}),...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})},cache:'no-store'});
   if(!response.ok) {let info;try{info=await response.json()}catch{};throw new Error(typeof info?.detail==='string'?info.detail:'HTTP '+response.status)}
   return response.headers.get('content-type')?.includes('application/json') ? response.json() : response;
 };
@@ -185,7 +185,7 @@ async function refreshPushedFrames(){
       if(mode?.local){
         state.textContent='OpenCV LAN: cámara desconectada o esperando fotogramas. Comprueba IP, puerto y red.';
       }else{
-        state.textContent='Puente IP sin señal: ejecuta scripts/start_camera_bridge.ps1 en tu laptop. Verifica URL IP, API Key e ID de cámara; consulta los mensajes de la consola del agente.';
+        state.textContent='Puente IP sin señal: ejecuta scripts/start_camera_bridge.ps1 en tu laptop. Verifica URL IP, acceso al servidor e ID de cámara; consulta los mensajes de la consola del agente.';
       }
       const old=card.querySelector('.feed img.camera-frame');
       if(old){if(old.src.startsWith('blob:'))URL.revokeObjectURL(old.src);old.remove();}
