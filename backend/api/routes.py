@@ -120,9 +120,13 @@ async def receive_camera_frame(camera_id: str, request: Request):
     directory = Path(os.getenv("NEXUS_CAMERA_FRAMES_DIR", "/app/data/camera_frames" if Path("/app/data").is_dir() else "data/camera_frames"))
     directory.mkdir(parents=True, exist_ok=True)
     target = directory / (camera_id + ".jpg")
-    temp = directory / (camera_id + ".tmp")
-    temp.write_bytes(frame)
-    temp.replace(target)
+    from uuid import uuid4
+    temp = directory / (camera_id + "." + uuid4().hex + ".tmp")
+    try:
+        temp.write_bytes(frame)
+        temp.replace(target)
+    finally:
+        temp.unlink(missing_ok=True)
     return {"status": "received", "camera_id": camera_id, "timestamp": datetime.now(timezone.utc).isoformat()}
 
 @router.get("/cameras/{camera_id}/frame")
