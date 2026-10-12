@@ -150,7 +150,7 @@ async function refreshPushedFrames(){
     cameraBusy.add(id);
     try{
       let mode=cameraMode.get(id);
-      if(!mode||Date.now()-mode.checked>15000){
+      if(!mode||Date.now()-mode.checked>3000){
         const status=await api('/cameras/'+encodeURIComponent(id)+'/status');
         mode={local:status.mode==='lan',checked:Date.now(),state:status.state};
         cameraHealth.set(id,status);
@@ -159,7 +159,7 @@ async function refreshPushedFrames(){
       }
       const cachedHealth=cameraHealth.get(id);if(cachedHealth)renderCameraHealth(card,cachedHealth);
       const now=Date.now();
-      if(now-(cameraLastPoll.get(id)||0)<(mode.local?250:3000))return;
+      if(now-(cameraLastPoll.get(id)||0)<(mode.local?1000:1500))return;
       cameraLastPoll.set(id,now);
       const response=await api('/cameras/'+encodeURIComponent(id)+'/frame');
       const blob=await response.blob();
