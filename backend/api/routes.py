@@ -305,4 +305,14 @@ def camera_status(camera_id: str):
     from backend.cameras.lan_manager import manager, enabled
     if storage.get_camera(camera_id) is None:
         raise HTTPException(status_code=404, detail="Camera not found")
-    return {"camera_id": camera_id, "mode": "lan" if enabled() else "bridge", **manager.status(camera_id)}
+    if enabled():
+        return {"camera_id": camera_id, "mode": "lan", **manager.status(camera_id)}
+    from pathlib import Path
+    import os
+    import time
+    directory = Path(os.getenv("NEXUS_CAMERA_FRAMES_DIR", "/app/data/camera_frames" if Path("/app/data").is_dir() else "data/camera_frames"))
+    target = directory / (camera_id + ".jpg")
+    if not target.is_file():
+        return {"camera_id": camera_id, "mode": "bridge", "state": "offline", "last_frame_age": None}
+    age = max(0.0, time.time() - target.stat().st_mtime)
+    return {"camera_id": camera_id, "mode": "bridge", "state": "connected" if age <= 15 else "stale", "last_frame_age": round(age, 2)}
