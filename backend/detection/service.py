@@ -50,12 +50,9 @@ async def classify_camera(camera_id: str):
         if frame is not None:
             result = await infer(frame)
             return {"camera_id": camera_id, **result, "_frame": frame if result.get("status") == "ok" else None}
-    try:
-        _validate_url(camera["url"])
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    frame = await asyncio.to_thread(_capture_once, camera["url"])
-    if frame is None:
-        raise HTTPException(status_code=503, detail="Camera frame unavailable")
-    result = await infer(frame)
-    return {"camera_id": camera_id, **result, "_frame": frame if result.get("status") == "ok" else None}
+    # Never access private LAN addresses from the cloud deployment.
+    # A trusted local bridge must upload a fresh JPEG first.
+    raise HTTPException(
+        status_code=503,
+        detail="No recent frame from camera bridge; start the local agent or run NEXUS in LAN mode",
+    )
