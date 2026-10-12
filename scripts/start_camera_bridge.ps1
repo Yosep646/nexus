@@ -26,9 +26,21 @@ $index = 0
 if (-not [int]::TryParse($selection, [ref]$index) -or $index -lt 0 -or $index -ge $cameras.Count) { throw "Seleccion invalida." }
 $camera = $cameras[$index]
 if (-not $CameraUrl) { $CameraUrl = $camera.url }
+if ([string]::IsNullOrWhiteSpace($CameraUrl)) { $CameraUrl = "http://192.168.1.50:8080/video" }
 $override = Read-Host "URL actual de IP Webcam (Enter para $CameraUrl)"
 if (-not [string]::IsNullOrWhiteSpace($override)) { $CameraUrl = $override.Trim() }
 $cameraUri = [Uri]$CameraUrl
+if ($cameraUri.AbsolutePath -eq '/') {
+  $CameraUrl = $CameraUrl.TrimEnd('/') + '/video'
+  $cameraUri = [Uri]$CameraUrl
+}
+Write-Host "IP Webcam: $CameraUrl" -ForegroundColor Cyan
+try {
+  $probe = Invoke-WebRequest -Uri $cameraUri.GetLeftPart([System.UriPartial]::Authority) -UseBasicParsing -TimeoutSec 5
+  Write-Host "Servidor HTTP IP Webcam responde: $($probe.StatusCode)" -ForegroundColor Green
+} catch {
+  Write-Warning "No se pudo abrir la página IP Webcam: $($_.Exception.Message)"
+}
 if ($cameraUri.Scheme -notin @('http', 'https', 'rtsp')) { throw "URL de camara invalida." }
 $port = $cameraUri.Port
 Write-Host "Probando $($cameraUri.Host):$port ..."
