@@ -14,8 +14,8 @@ from scripts import camera_bridge
 def test_bridge_jpeg_size_and_dimensions():
     frame = np.zeros((720, 1600, 3), dtype=np.uint8)
     jpeg = camera_bridge.encode_frame(frame)
-    assert jpeg.startswith(b"\\xff\\xd8")
-    assert jpeg.endswith(b"\\xff\\xd9")
+    assert jpeg.startswith(bytes((255, 216)))
+    assert jpeg.endswith(bytes((255, 217)))
     assert len(jpeg) <= 2_000_000
 
 
@@ -49,6 +49,6 @@ def test_bridge_preflight_rejects_unknown_camera(monkeypatch):
         def __enter__(self): return self
         def __exit__(self, *_): return False
         def read(self, *_): return b"[]"
-    with patch.object(camera_bridge, "api_request", return_value=FakeResponse()), \\
+    with patch.object(camera_bridge, "api_request", return_value=FakeResponse()), \
          patch.object(camera_bridge, "open_camera", side_effect=AssertionError("must not open")):
         assert camera_bridge.main() == 2
