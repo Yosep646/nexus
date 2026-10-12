@@ -37,13 +37,10 @@ $cameraUri = $null
 if (-not [Uri]::TryCreate($CameraUrl, [UriKind]::Absolute, [ref]$cameraUri)) {
   throw "URL invalida. Indica la direccion de esta camara, incluyendo protocolo y puerto."
 }
-if ($cameraUri.AbsolutePath -eq '/') {
-  $CameraUrl = $CameraUrl.TrimEnd('/') + '/video'
-  $cameraUri = [Uri]$CameraUrl
-}
 Write-Host "Camara seleccionada: $($camera.name) | ID: $($camera.id)" -ForegroundColor Cyan
 Write-Host "Destino LAN: $($cameraUri.Host):$($cameraUri.Port)$($cameraUri.AbsolutePath)" -ForegroundColor Cyan
 try {
+  if ($cameraUri.Scheme -eq 'rtsp') { throw 'La prueba HTTP no corresponde a RTSP; se comprobara TCP y OpenCV.' }
   $probe = Invoke-WebRequest -Uri $cameraUri.GetLeftPart([System.UriPartial]::Authority) -UseBasicParsing -TimeoutSec 5
   Write-Host "Servidor HTTP IP Webcam responde: $($probe.StatusCode)" -ForegroundColor Green
 } catch {
