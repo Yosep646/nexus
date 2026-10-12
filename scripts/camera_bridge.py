@@ -1,7 +1,6 @@
 """NEXUS IP camera bridge: LAN OpenCV capture -> authenticated HTTPS JPEG uploads.
 
 Usage (Windows PowerShell):
-  $env:NEXUS_API_KEY = '<your secret>'
   python scripts/camera_bridge.py --camera-url http://192.168.1.50:8080/video --camera-id UUID
 
 The local agent never exposes an inbound port and never sends secrets in URLs or logs.
@@ -76,7 +75,7 @@ def main():
     parser.add_argument("--server", default="https://nexus-production-6562.up.railway.app")
     parser.add_argument("--fps", type=float, default=2.0)
     args = parser.parse_args()
-    key = os.environ.get("NEXUS_API_KEY", "").strip()
+    key = ""  # NEXUS keyless API
     try:
         UUID(args.camera_id)
     except ValueError:
@@ -87,8 +86,6 @@ def main():
     local_hosts = ("127.0.0.1", "localhost", "::1")
     if server.hostname in local_hosts:
         key = ""  # Local mode never sends an API key
-    if not key and server.hostname not in local_hosts:
-        parser.error("Railway requiere autenticación; sin API Key solo se admite backend local")
     if not 0.2 <= args.fps <= 5:
         parser.error("--fps debe estar entre 0.2 y 5")
     if urlsplit(args.camera_url).scheme not in ("http", "https", "rtsp"):
@@ -96,7 +93,7 @@ def main():
 
     root = args.server.rstrip("/")
     endpoint = f"{root}/api/cameras/{quote(args.camera_id)}/frame"
-    print("Verificando acceso HTTPS a Railway...", flush=True)
+    print("Verificando API NEXUS sin clave...", flush=True)
     try:
         with api_request(f"{root}/api/cameras", key) as response:
             cameras = json.load(response)
