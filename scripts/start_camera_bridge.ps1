@@ -6,7 +6,11 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-Location (Resolve-Path (Join-Path $PSScriptRoot '..'))
 $python = Join-Path (Get-Location) '.venv-bridge\Scripts\python.exe'
-if (-not (Test-Path $python)) { throw "Ejecuta scripts\install_camera_bridge.ps1 primero." }
+if (-not (Test-Path $python)) {
+  Write-Host "Instalando OpenCV local automaticamente..." -ForegroundColor Cyan
+  & (Join-Path $PSScriptRoot "install_camera_bridge.ps1")
+  if (-not (Test-Path $python)) { throw "No se pudo instalar OpenCV. Ejecuta install_camera_bridge.ps1." }
+}
 $uri = [Uri]$Server
 $localServer = ($uri.Host -in @('localhost', '127.0.0.1', '::1'))
 if (-not $localServer -and $uri.Scheme -ne 'https') { throw "Servidor remoto requiere HTTPS." }
@@ -29,7 +33,12 @@ if ($cameraUri.Scheme -notin @('http', 'https', 'rtsp')) { throw "URL de camara 
 $port = $cameraUri.Port
 Write-Host "Probando $($cameraUri.Host):$port ..."
 $test = Test-NetConnection -ComputerName $cameraUri.Host -Port $port -WarningAction SilentlyContinue
-if (-not $test.TcpTestSucceeded) { Write-Warning "Puerto inaccesible: revisa IP Webcam, Wi-Fi, puerto y aislamiento AP." }
+if (-not $test.TcpTestSucceeded) {
+  Write-Warning "SIN ACCESO AL TELEFONO: IP Webcam debe mostrar Start server activo. Verifica IP, puerto, Wi-Fi y aislamiento AP."
+  Write-Host "No es un error de Railway: OpenCV no puede acceder al telefono desde esta laptop." -ForegroundColor Yellow
+} else {
+  Write-Host "Telefono accesible por TCP. Iniciando OpenCV..." -ForegroundColor Green
+}
 Write-Host "Iniciando puente OpenCV para $($camera.name) ..."
 
 & $python scripts/camera_bridge.py --camera-url $CameraUrl --camera-id $camera.id --server $Server --fps 2
