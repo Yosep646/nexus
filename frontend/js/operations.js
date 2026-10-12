@@ -125,6 +125,18 @@ async function startBrowserBroadcast(camera,card){
 
 // Adaptive camera preview: local LAN uses up to 4 authenticated frames/s.
 // Railway bridge stays at its actual lower upload rate. Never display stale frames as live.
+const cameraHealth = new Map();
+function renderCameraHealth(card, status) {
+  const indicator=card.querySelector('.camera-health');
+  if(!indicator)return;
+  const age=Number(status?.last_frame_age);
+  const hasFreshFrame=status?.last_frame_age!=null && Number.isFinite(age) && age<=8;
+  const state=status?.state==='connected' && hasFreshFrame?'online':status?.state==='reconnecting'?'reconnecting':'offline';
+  indicator.dataset.state=state;
+  indicator.textContent=state==='online'?'● EN LÍNEA':state==='reconnecting'?'◌ RECONECTANDO':'○ SIN SEÑAL';
+  const ageNode=card.querySelector('.frame-age');
+  if(ageNode)ageNode.textContent=state==='online'?'Fotograma: '+age.toFixed(1)+' s':'Sin fotograma reciente';
+}
 const detectionTiming = new Map();
 const cameraMode = new Map();
 const cameraBusy = new Set();
@@ -141,8 +153,11 @@ async function refreshPushedFrames(){
       if(!mode||Date.now()-mode.checked>15000){
         const status=await api('/cameras/'+encodeURIComponent(id)+'/status');
         mode={local:status.mode==='lan',checked:Date.now(),state:status.state};
+        cameraHealth.set(id,status);
+        renderCameraHealth(card,status);
         cameraMode.set(id,mode);
       }
+      const cachedHealth=cameraHealth.get(id);if(cachedHealth)renderCameraHealth(card,cachedHealth);
       const now=Date.now();
       if(now-(cameraLastPoll.get(id)||0)<(mode.local?250:3000))return;
       cameraLastPoll.set(id,now);
@@ -161,9 +176,11 @@ async function refreshPushedFrames(){
       image.onerror=()=>URL.revokeObjectURL(objectUrl);
       image.src=objectUrl;
       view.append(image);
-      card.querySelector('.camera-state').textContent=(mode.local?'OpenCV LAN conectado':'Puente IP conectado')+' · fotograma real recibido '+new Date().toLocaleTimeString('es-PE');
+      card.querySelector('.camera-state').textContent=(mode.local?'OpenCV LAN':'Puente IP')+' · fotograma recibido '+new Date().toLocaleTimeString('es-PE');
+      renderCameraHealth(card,{state:'connected',last_frame_age:0});
     }catch(e){
       const state=card.querySelector('.camera-state');
+      renderCameraHealth(card,{state:'offline',last_frame_age:null});
       const mode=cameraMode.get(id);
       if(mode?.local){
         state.textContent='OpenCV LAN: cámara desconectada o esperando fotogramas. Comprueba IP, puerto y red.';
@@ -178,7 +195,7 @@ async function refreshPushedFrames(){
   }));
 }
 
-function renderCameras(){if(browserBroadcast)return;const grid=$('camera-grid');grid.replaceChildren();$('camera-capacity').textContent=cameras.length+' cámaras registradas';if(!cameras.length){grid.innerHTML='<div class="empty">Sin cámaras registradas</div>';return;}for(const camera of cameras){const card=document.createElement('article');card.className='camera';card.dataset.cameraId=String(camera.id);const latest=detections.find(d=>String(d.camera_id)===String(camera.id));const confidence=latest&&Number.isFinite(Number(latest.confidence))?(Number(latest.confidence)*100).toFixed(1)+'%':'—';card.innerHTML='<div class="feed"><span class="feed-icon">▣</span><span class="feed-label">FUENTE IP · VIDEO BAJO AUTORIZACIÓN</span></div><div class="camera-info"><h3>'+escape(camera.name)+'</h3><p>'+escape(latest?latest.label+' · confianza '+confidence:'Sin detecciones registradas')+'</p><div class="camera-actions"><button class="snapshot outline">Ver cámara IP</button><button class="local-preview outline">Vista local</button><button class="browser-broadcast">Iniciar transmisión</button><button class="detect">Analizar IA</button><button class="remove outline">Eliminar</button></div><small class="camera-state">Esperando señal</small><div class="detection-timing">IA: sin medición</div></div>';const savedTiming=detectionTiming.get(String(camera.id));if(savedTiming){const timing=card.querySelector('.detection-timing');if(timing)timing.textContent=savedTiming;}
+function renderCameras(){if(browserBroadcast)return;const grid=$('camera-grid');grid.replaceChildren();$('camera-capacity').textContent=cameras.length+' cámaras registradas';if(!cameras.length){grid.innerHTML='<div class="empty">Sin cámaras registradas</div>';return;}for(const camera of cameras){const card=document.createElement('article');card.className='camera';card.dataset.cameraId=String(camera.id);const latest=detections.find(d=>String(d.camera_id)===String(camera.id));const confidence=latest&&Number.isFinite(Number(latest.confidence))?(Number(latest.confidence)*100).toFixed(1)+'%':'—';card.innerHTML='<div class="feed"><span class="feed-icon">▣</span><span class="feed-label">CÁMARA IP · '+escape(camera.name)+'</span><span class="camera-health" data-state="offline">○ SIN SEÑAL</span><span class="frame-age">Sin fotograma reciente</span></div><div class="camera-info"><h3>'+escape(camera.name)+'</h3><p>'+escape(latest?latest.label+' · confianza '+confidence:'Sin detecciones registradas')+'</p><div class="camera-actions"><button class="snapshot outline">Ver cámara IP</button><button class="local-preview outline">Vista local</button><button class="browser-broadcast">Iniciar transmisión</button><button class="detect">Analizar IA</button><button class="remove outline">Eliminar</button></div><small class="camera-state">Esperando señal</small><div class="detection-timing">IA: sin medición</div></div>';const savedTiming=detectionTiming.get(String(camera.id));if(savedTiming){const timing=card.querySelector('.detection-timing');if(timing)timing.textContent=savedTiming;}
 card.querySelector('.snapshot').onclick=()=>loadSnapshot(camera,card);card.querySelector('.local-preview').onclick=()=>openLocalCamera(camera,card);card.querySelector('.browser-broadcast').onclick=()=>startBrowserBroadcast(camera,card);card.querySelector('.detect').onclick=async()=>{const state=card.querySelector('.camera-state');state.textContent='Analizando…';try{const result=await api('/cameras/'+encodeURIComponent(camera.id)+'/detect',{method:'POST'});const latency=result.inference_ms!=null?'IA '+result.inference_ms+' ms · Procesamiento '+result.total_processing_ms+' ms':'IA: medición no disponible';detectionTiming.set(String(camera.id),latency);state.textContent=result.status==='ok'?'Análisis completado · '+latency:'Sin inferencia: '+(result.status||'modelo no disponible');await loadData();}catch(e){state.textContent='Error: '+e.message}};card.querySelector('.remove').onclick=async()=>{if(browserBroadcast?.cameraId===String(camera.id))stopBrowserBroadcast();if(!confirm('¿Eliminar esta cámara?'))return;try{await api('/cameras/'+encodeURIComponent(camera.id),{method:'DELETE'});await loadData()}catch(e){message('No se pudo eliminar: '+e.message)}};grid.append(card);}}
 function renderEvents(){const body=$('event-rows');body.replaceChildren();if(!detections.length){body.innerHTML='<tr><td colspan="5">Sin detecciones reales registradas</td></tr>';return;}for(const d of detections.slice(0,100)){const tr=document.createElement('tr');const cam=cameras.find(c=>String(c.id)===String(d.camera_id));const confidence=Number(d.confidence);const date=d.created_at||d.timestamp;const cols=[date?new Date(date).toLocaleString('es-PE'):'—',cam?.name||d.camera_id||'—',d.label||'—',Number.isFinite(confidence)?(confidence*100).toFixed(1)+'%':'—',d.review_status||'—'];for(const val of cols){const td=document.createElement('td');td.textContent=String(val);tr.append(td)}body.append(tr)}}
 function renderAdvisories(items){items=Array.isArray(items)?items:[];advisoryCache=items;const filter=$('alert-filter').value;const shown=filter==='all'?items:items.filter(x=>x.review_status===filter);$('alert-count').textContent=shown.length+' señales visibles · '+items.length+' registradas';const pending=items.filter(x=>x.review_status==='pending_human_review');const banner=$('alert-strip');banner.className='alert-strip '+(pending.length?'alert-active':items.length?'alert-observed':'');$('alert-headline').textContent=pending.length?'⚠ '+pending.length+' SEÑALES PENDIENTES DE REVISIÓN':items.length?'SEÑALES REGISTRADAS · REVISAR HISTORIAL':'CENTRO DE ALERTAS · SIN SEÑALES REGISTRADAS';$('alert-summary').textContent=pending.length?'Se requiere validación humana. No son pronósticos de desastres.':items.length?'Hay registros de fenómenos; consulta su estado antes de tomar decisiones.':'Sin señales registradas. Esto no garantiza ausencia de riesgos.';if(alertBootstrapped&&pending.length&&Notification.permission==='granted'){for(const item of pending){if(!previousAlertIds.has(item.detection_id)){new Notification('NEXUS · Señal para revisión',{body:item.phenomenon+': '+item.message,tag:item.detection_id});}}}previousAlertIds=new Set(pending.map(x=>x.detection_id));alertBootstrapped=true;const root=$('advisory-list');root.replaceChildren();if(!shown.length){const p=document.createElement('p');p.className='help';p.textContent='Sin señales de riesgo registradas. La ausencia de detecciones no garantiza ausencia de peligro.';root.append(p);return;}for(const item of shown.slice(0,12)){const el=document.createElement('article');el.className='advisory';const h=document.createElement('strong');h.textContent=item.phenomenon+' · '+(Number(item.confidence)*100).toFixed(1)+'% de confianza del clasificador';const p=document.createElement('p');p.textContent=item.message;const small=document.createElement('small');small.textContent='Cámara '+item.camera_id+' · '+(item.review_status||'sin revisar')+' · No es pronóstico meteorológico';el.append(h,p,small);if(item.review_status==='pending_human_review'){const actions=document.createElement('div');actions.className='review-actions';for(const [label,decision] of [['✓ Confirmar','confirmed'],['× Descartar','dismissed']]){const button=document.createElement('button');button.textContent=label;button.className=decision==='dismissed'?'outline':'';button.onclick=async()=>{if(!confirm('¿Registrar decisión humana: '+label+'?'))return;try{await api('/detections/'+encodeURIComponent(item.detection_id)+'/review',{method:'PATCH',body:JSON.stringify({decision,notes:'Revisión manual desde el centro de operaciones'})});await loadData()}catch(e){message('No se pudo revisar: '+e.message)}};actions.append(button)}el.append(actions)}root.append(el);}}
