@@ -85,6 +85,8 @@ def main():
     if (server.scheme != "https" and not (server.scheme == "http" and server.hostname in ("localhost", "127.0.0.1", "::1"))) or not server.netloc or server.username or server.password:
         parser.error("Usa HTTPS o HTTP únicamente para localhost")
     local_hosts = ("127.0.0.1", "localhost", "::1")
+    if server.hostname in local_hosts:
+        key = ""  # Local mode never sends an API key
     if not key and server.hostname not in local_hosts:
         parser.error("Railway requiere autenticación; sin API Key solo se admite backend local")
     if not 0.2 <= args.fps <= 5:
