@@ -1,4 +1,4 @@
-"""NEXUS IP camera bridge: LAN OpenCV capture -> authenticated HTTPS JPEG uploads.
+"""NEXUS IP camera bridge: LAN OpenCV capture -> HTTPS JPEG uploads.
 
 Usage (Windows PowerShell):
   python scripts/camera_bridge.py --camera-url http://192.168.1.50:8080/video --camera-id UUID
@@ -118,6 +118,7 @@ def main():
     camera_port = camera_parts.port or (554 if camera_parts.scheme == "rtsp" else 443 if camera_parts.scheme == "https" else 80)
     delay = 1.0 / args.fps
     consecutive_upload_errors = 0
+    uploaded_frames = 0
     while True:
         print(f"Comprobando TCP {camera_parts.hostname}:{camera_port}...", flush=True)
         try:
@@ -156,7 +157,11 @@ def main():
         try:
             while True:
                 started = time.monotonic()
-                ok, frame = capture.read()
+                try:
+                    ok, frame = capture.read()
+                except (cv2.error, OSError) as read_error:
+                    print("Error leyendo IP Webcam:", type(read_error).__name__, str(read_error), flush=True)
+                    break
                 if not ok or frame is None:
                     print("La cámara dejó de enviar fotogramas.", flush=True)
                     break
@@ -166,6 +171,17 @@ def main():
                         if response.status != 200:
                             raise RuntimeError(f"Respuesta inesperada: {response.status}")
                     consecutive_upload_errors = 0
+                    uploaded_frames += 1
+                    if uploaded_frames == 1 or uploaded_frames % 20 == 0:
+                        try:
+                            with api_request(f"{root}/api/cameras/{quote(args.camera_id)}/status", key, timeout=8) as check_response:
+                                remote_status = json.load(check_response)
+                            if remote_status.get("state") == "connected":
+                                print("Railway confirma recepción de video; antigüedad:", remote_status.get("last_frame_age"), "s", flush=True)
+                            else:
+                                print("Railway no confirma imagen reciente:", remote_status.get("state"), flush=True)
+                        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError, OSError) as verify_error:
+                            print("No se pudo consultar el estado remoto:", error_text(verify_error), flush=True)
                     print(f"Fotograma enviado: {len(jpeg)//1024} KB, "
                           f"envío {round((time.monotonic()-started)*1000)} ms", flush=True)
                 except urllib.error.HTTPError as exc:
