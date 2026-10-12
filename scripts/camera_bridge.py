@@ -118,7 +118,10 @@ def main():
         print("IP Webcam: URL normalizada a /video", flush=True)
     if not camera_parts.hostname:
         parser.error("URL de IP Webcam sin host")
-    camera_port = camera_parts.port or (554 if camera_parts.scheme == "rtsp" else 443 if camera_parts.scheme == "https" else 80)
+    try:
+        camera_port = camera_parts.port or (554 if camera_parts.scheme == "rtsp" else 443 if camera_parts.scheme == "https" else 80)
+    except ValueError:
+        parser.error("Puerto IP Webcam inválido: utiliza un número como 8080")
     delay = 1.0 / args.fps
     consecutive_upload_errors = 0
     uploaded_frames = 0
@@ -148,7 +151,7 @@ def main():
                 capture.release()
                 capture = open_camera(fallback)
         except (cv2.error, OSError) as exc:
-            print("OpenCV:", type(exc).__name__, "reintentando en 5 s", flush=True)
+            print("OpenCV:", type(exc).__name__, str(exc), "reintentando en 5 s", flush=True)
             time.sleep(5)
             continue
         if not capture.isOpened():
@@ -156,7 +159,7 @@ def main():
             print("TCP accesible, OpenCV no abre: revisa /video, formato y permisos.", flush=True)
             time.sleep(5)
             continue
-        print("OpenCV conectado. Enviando fotogramas a NEXUS...", flush=True)
+        print("OpenCV abrió el stream. Comprobando lectura y enviando fotogramas a NEXUS...", flush=True)
         try:
             while True:
                 started = time.monotonic()
@@ -165,8 +168,8 @@ def main():
                 except (cv2.error, OSError) as read_error:
                     print("Error leyendo IP Webcam:", type(read_error).__name__, str(read_error), flush=True)
                     break
-                if not ok or frame is None:
-                    print("La cámara dejó de enviar fotogramas.", flush=True)
+                if not ok or frame is None or getattr(frame, "size", 0) == 0:
+                    print("La cámara no entrega fotogramas válidos; revisa IP Webcam /video y la red.", flush=True)
                     break
                 try:
                     jpeg = encode_frame(frame)
